@@ -1,0 +1,1005 @@
+openapi: 3.1.0
+info:
+  title: API Quality Lab — Inventory API
+  version: 1.0.0
+  summary: Contract for the local, intentionally simple Inventory API under test.
+  description: |
+    Normative contract for the local Inventory SUT. It is written before the SUT and
+    QA suite, and both must conform to it — the contract is never weakened to make a
+    failing test pass.
+
+    Conventions used by this document:
+
+    - All request and response bodies are JSON. Errors use `application/problem+json`
+      (RFC 9457) with a stable `code` and, where relevant, an `errors[]` list.
+    - Two synthetic accounts exist: `alice` and `bob`. Every item belongs to exactly
+      one account. An item owned by another account is indistinguishable from a
+      nonexistent item: `GET`, `PATCH` and `DELETE` all answer 404 `item_not_found`.
+    - Bearer tokens are opaque strings issued by `POST /auth/login`. Tokens are not
+      JWTs and carry no client-readable claims.
+    - Servers, ids and timestamps are server-generated. Ordering of `GET /items` is
+      deterministic: ascending `createdAt`, ties broken by ascending `id`.
+    - Requirement identifiers live in `x-requirements` and are referenced from each
+      operation via `x-requirement-ids`. Error codes are registered in
+      `x-error-codes`. Both extension registries are verified by
+      `npm run contract:validate`.
+
+    Out of scope for this contract: rate limiting, token refresh, item search,
+    soft deletion, multi-tenant administration and pagination cursors.
+  contact:
+    name: API Quality Lab
+servers:
+  - url: http://127.0.0.1:3000
+    description: Local SUT default. Tests override the base URL through AQL_BASE_URL.
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+security:
+  - bearerAuth: []
+tags:
+  - name: environment
+    description: Unauthenticated service health.
+  - name: auth
+    description: Synthetic-user authentication.
+  - name: items
+    description: Per-user inventory items.
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Service health
+      description: >
+        Unauthenticated liveness probe. Returns the literal status "ok" and the
+        server's version. Must not require or evaluate credentials.
+      tags: [environment]
+      security: []
+      responses:
+        "200":
+          description: Service is ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+      x-requirement-ids:
+        - REQ-ENV-01
+
+  /auth/login:
+    post:
+      operationId: login
+      summary: Exchange synthetic credentials for a bearer token
+      description: >
+        Authenticates one of the synthetic users and returns an opaque bearer token.
+        The response never contains a password, password hash or internal account
+        record. Unknown usernames and wrong passwords produce the same 401 body so
+        callers cannot enumerate accounts.
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        "200":
+          description: Credentials accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        "400":
+          description: Malformed JSON or a login field failed validation.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                validation_failed:
+                  value:
+                    type: "about:blank"
+                    title: Bad Request
+                    status: 400
+                    code: validation_failed
+                    detail: The request body failed validation.
+                    errors:
+                      - field: username
+                        code: required
+                        message: username is required
+                malformed_json:
+                  value:
+                    type: "about:blank"
+                    title: Bad Request
+                    status: 400
+                    code: malformed_json
+                    detail: The request body is not valid JSON.
+          x-error-codes: [validation_failed, malformed_json]
+        "401":
+          description: Unknown username or wrong password.
+          headers:
+            WWW-Authenticate:
+              $ref: '#/components/headers/WWWAuthenticate'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                invalid_credentials:
+                  value:
+                    type: "about:blank"
+                    title: Unauthorized
+                    status: 401
+                    code: invalid_credentials
+                    detail: Invalid username or password.
+          x-error-codes: [invalid_credentials]
+        "415":
+          description: Content-Type is not application/json.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          x-error-codes: [unsupported_media_type]
+      x-requirement-ids:
+        - REQ-AUTH-01
+        - REQ-AUTH-02
+        - REQ-AUTH-03
+        - REQ-AUTH-06
+        - REQ-VAL-06
+
+  /items:
+    get:
+      operationId: listItems
+      summary: List the caller's items
+      description: >
+        Returns only items owned by the authenticated user, ordered by ascending
+        createdAt and then ascending id. total counts every owned item regardless of
+        the requested slice. An offset beyond total yields an empty items array with
+        the unchanged total.
+      tags: [items]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        "200":
+          description: Paginated collection of the caller's items.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemList'
+        "400":
+          description: limit or offset is not an integer within its documented bounds.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          x-error-codes: [validation_failed]
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+      x-requirement-ids:
+        - REQ-ITEM-03
+        - REQ-ITEM-04
+        - REQ-ITEM-05
+        - REQ-ISO-02
+        - REQ-AUTH-04
+        - REQ-AUTH-05
+
+    post:
+      operationId: createItem
+      summary: Create an item owned by the caller
+      description: >
+        Creates an item for the authenticated user. The server owns id, ownerId,
+        createdAt and updatedAt. Unknown properties are rejected, never ignored.
+        Defaults: description "" and category "other".
+      tags: [items]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemCreateRequest'
+      responses:
+        "201":
+          description: Item created.
+          headers:
+            Location:
+              $ref: '#/components/headers/ItemLocation'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        "400":
+          description: Malformed JSON or body validation failure; no item is created.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                validation_failed:
+                  value:
+                    type: "about:blank"
+                    title: Bad Request
+                    status: 400
+                    code: validation_failed
+                    detail: The request body failed validation.
+                    errors:
+                      - field: price
+                        code: out_of_range
+                        message: price must be greater than or equal to 0
+                      - field: quantity
+                        code: required
+                        message: quantity is required
+                malformed_json:
+                  value:
+                    type: "about:blank"
+                    title: Bad Request
+                    status: 400
+                    code: malformed_json
+                    detail: The request body is not valid JSON.
+          x-error-codes: [validation_failed, malformed_json]
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "415":
+          $ref: '#/components/responses/UnsupportedMediaType'
+      x-requirement-ids:
+        - REQ-ITEM-01
+        - REQ-AUTH-04
+        - REQ-AUTH-05
+        - REQ-VAL-01
+        - REQ-VAL-02
+        - REQ-VAL-03
+        - REQ-VAL-04
+        - REQ-VAL-05
+        - REQ-VAL-06
+        - REQ-VAL-07
+
+  /items/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ItemId'
+    get:
+      operationId: getItem
+      summary: Read one item owned by the caller
+      description: >
+        Returns the caller's item. Unknown ids and ids owned by another user both
+        produce the same 404 item_not_found response.
+      tags: [items]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Item representation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/ItemNotFound'
+      x-requirement-ids:
+        - REQ-ITEM-02
+        - REQ-ITEM-08
+        - REQ-ISO-01
+        - REQ-AUTH-04
+        - REQ-AUTH-05
+
+    patch:
+      operationId: updateItem
+      summary: Partially update an item owned by the caller
+      description: >
+        Applies only the supplied fields. The body must contain at least one known
+        property; an empty object is rejected. createdAt and ownerId are immutable;
+        updatedAt advances. Successive re-reads return the persisted values.
+      tags: [items]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemUpdateRequest'
+      responses:
+        "200":
+          description: Updated item representation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        "400":
+          description: Malformed JSON, empty body, unknown property or validation failure.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          x-error-codes: [validation_failed, malformed_json]
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/ItemNotFound'
+        "415":
+          $ref: '#/components/responses/UnsupportedMediaType'
+      x-requirement-ids:
+        - REQ-ITEM-06
+        - REQ-ITEM-08
+        - REQ-ITEM-09
+        - REQ-ISO-01
+        - REQ-AUTH-04
+        - REQ-AUTH-05
+        - REQ-VAL-01
+        - REQ-VAL-02
+        - REQ-VAL-03
+        - REQ-VAL-04
+        - REQ-VAL-05
+        - REQ-VAL-06
+        - REQ-VAL-07
+
+    delete:
+      operationId: deleteItem
+      summary: Delete an item owned by the caller
+      description: >
+        Deletes the caller's item and returns no body. Deleting the same item twice
+        yields 404 on the second call. An item owned by another user is never deleted.
+      tags: [items]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Item deleted. The response has no content.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          $ref: '#/components/responses/ItemNotFound'
+      x-requirement-ids:
+        - REQ-ITEM-07
+        - REQ-ITEM-08
+        - REQ-ISO-01
+        - REQ-AUTH-04
+        - REQ-AUTH-05
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: >
+        Opaque token issued by POST /auth/login. Send as
+        `Authorization: Bearer <token>`.
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Maximum number of items to return. Defaults to 20.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: Number of owned items to skip. Defaults to 0.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    ItemId:
+      name: id
+      in: path
+      required: true
+      description: >
+        Item identifier. Ids are UUIDs generated by the server; any unknown value,
+        including a well-formed id owned by another user, produces 404 item_not_found.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+
+  headers:
+    ItemLocation:
+      description: Relative URI of the created item.
+      required: true
+      schema:
+        type: string
+        pattern: '^/items/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    WWWAuthenticate:
+      description: Bearer authentication challenge.
+      required: true
+      schema:
+        type: string
+        const: Bearer
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid bearer token.
+      headers:
+        WWW-Authenticate:
+          $ref: '#/components/headers/WWWAuthenticate'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            missing_token:
+              value:
+                type: "about:blank"
+                title: Unauthorized
+                status: 401
+                code: missing_token
+                detail: An Authorization header with a Bearer token is required.
+            invalid_token:
+              value:
+                type: "about:blank"
+                title: Unauthorized
+                status: 401
+                code: invalid_token
+                detail: The bearer token is not recognized.
+      x-error-codes: [missing_token, invalid_token]
+    ItemNotFound:
+      description: No item with this id is owned by the caller.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            item_not_found:
+              value:
+                type: "about:blank"
+                title: Not Found
+                status: 404
+                code: item_not_found
+                detail: No item with this id exists for the authenticated user.
+      x-error-codes: [item_not_found]
+    UnsupportedMediaType:
+      description: Content-Type is not application/json.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            unsupported_media_type:
+              value:
+                type: "about:blank"
+                title: Unsupported Media Type
+                status: 415
+                code: unsupported_media_type
+                detail: This endpoint accepts application/json only.
+      x-error-codes: [unsupported_media_type]
+
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status, version]
+      properties:
+        status:
+          type: string
+          const: ok
+        version:
+          type: string
+          pattern: '^\d+\.\d+\.\d+$'
+          description: SUT version, semver formatted.
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 32
+          pattern: '\S'
+          description: Synthetic username. Must contain a non-whitespace character.
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '\S'
+          description: Synthetic password. Must contain a non-whitespace character.
+
+    LoginResponse:
+      type: object
+      additionalProperties: false
+      required: [token, tokenType, expiresIn, user]
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Opaque bearer token. Never a JWT with client-readable claims.
+        tokenType:
+          type: string
+          const: Bearer
+        expiresIn:
+          type: integer
+          minimum: 1
+          maximum: 86400
+          description: Token lifetime in seconds.
+        user:
+          $ref: '#/components/schemas/UserSummary'
+
+    UserSummary:
+      type: object
+      additionalProperties: false
+      required: [id, username]
+      properties:
+        id:
+          type: string
+          pattern: '^usr_[a-z0-9]+$'
+        username:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{2,31}$'
+
+    Category:
+      type: string
+      enum: [electronics, books, food, other]
+
+    Item:
+      type: object
+      additionalProperties: false
+      required: [id, ownerId, name, description, category, price, quantity, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          pattern: '^usr_[a-z0-9]+$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        description:
+          type: string
+          maxLength: 500
+        category:
+          $ref: '#/components/schemas/Category'
+        price:
+          type: number
+          minimum: 0
+          maximum: 1000000
+          multipleOf: 0.01
+          description: Non-negative amount with at most two decimal places.
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ItemCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [name, price, quantity]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          pattern: '\S'
+          description: >-
+            Leading and trailing whitespace is trimmed before storage. The supplied
+            value must be 1-80 characters and contain a non-whitespace character.
+        description:
+          type: string
+          maxLength: 500
+          default: ''
+        category:
+          $ref: '#/components/schemas/Category'
+          default: other
+        price:
+          type: number
+          minimum: 0
+          maximum: 1000000
+          multipleOf: 0.01
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 10000
+
+    ItemUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: At least one known property is required; an empty object is a 400.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          pattern: '\S'
+          description: >-
+            Leading and trailing whitespace is trimmed before storage. When supplied,
+            the value must be 1-80 characters and contain a non-whitespace character.
+        description:
+          type: string
+          maxLength: 500
+        category:
+          $ref: '#/components/schemas/Category'
+        price:
+          type: number
+          minimum: 0
+          maximum: 1000000
+          multipleOf: 0.01
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 10000
+
+    ItemList:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Item'
+        total:
+          type: integer
+          minimum: 0
+          description: Total owned items, independent of limit and offset.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, code, detail]
+      description: >
+        RFC 9457 problem details. `errors` is required when `code` is
+        `validation_failed` and omitted otherwise. `status` equals the HTTP status.
+      properties:
+        type:
+          type: string
+          minLength: 1
+          description: Problem type URI. "about:blank" when no specific type applies.
+        title:
+          type: string
+          minLength: 1
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_]*$'
+          description: Stable machine-readable code registered in x-error-codes.
+        detail:
+          type: string
+          minLength: 1
+        errors:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/FieldError'
+      allOf:
+        - if:
+            properties:
+              code:
+                const: validation_failed
+            required: [code]
+          then:
+            required: [errors]
+
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+          minLength: 1
+          description: Request path of the offending value, e.g. price or username.
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_]*$'
+          description: >
+            One of required, blank, too_long, wrong_type, out_of_range,
+            too_many_decimals, invalid_enum or unknown_property.
+        message:
+          type: string
+          minLength: 1
+
+x-requirements:
+  - id: REQ-ENV-01
+    area: environment
+    scope: operation
+    statement: >-
+      GET /health returns 200 application/json with status "ok" and a non-empty
+      semver version, without authentication.
+    appliesTo:
+      - GET /health
+  - id: REQ-AUTH-01
+    area: auth
+    scope: operation
+    statement: >-
+      POST /auth/login with valid credentials for either synthetic user returns 200
+      with a non-empty opaque token, tokenType "Bearer", a positive expiresIn and a
+      user summary containing no password or hash.
+    appliesTo:
+      - POST /auth/login
+  - id: REQ-AUTH-02
+    area: auth
+    scope: operation
+    statement: >-
+      An unknown username or a wrong password returns 401 invalid_credentials as
+      problem+json; no token is issued and the response does not reveal which field
+      was wrong.
+    appliesTo:
+      - POST /auth/login
+  - id: REQ-AUTH-03
+    area: auth
+    scope: operation
+    statement: >-
+      Login with a missing, blank, non-string or unknown extra property returns 400
+      validation_failed with at least one errors[] entry naming the offending field.
+    appliesTo:
+      - POST /auth/login
+  - id: REQ-AUTH-04
+    area: auth
+    scope: operation
+    statement: >-
+      A protected endpoint called without an Authorization header returns 401
+      missing_token with WWW-Authenticate Bearer, and no item data.
+    appliesTo:
+      - GET /items
+      - POST /items
+      - GET /items/{id}
+      - PATCH /items/{id}
+      - DELETE /items/{id}
+  - id: REQ-AUTH-05
+    area: auth
+    scope: operation
+    statement: >-
+      A protected endpoint called with a non-Bearer scheme, an empty token or an
+      unknown token returns 401 invalid_token and no item data.
+    appliesTo:
+      - GET /items
+      - POST /items
+      - GET /items/{id}
+      - PATCH /items/{id}
+      - DELETE /items/{id}
+  - id: REQ-AUTH-06
+    area: auth
+    scope: operation
+    statement: >-
+      Each synthetic user's token identifies exactly that user; the login response
+      user.id always matches the account whose credentials were supplied.
+    appliesTo:
+      - POST /auth/login
+  - id: REQ-ITEM-01
+    area: items
+    scope: operation
+    statement: >-
+      POST /items with a valid body returns 201, a Location header /items/{id}, and
+      the full created item with a server-generated UUID id, ownerId equal to the
+      caller's user id, and equal createdAt and updatedAt timestamps.
+    appliesTo:
+      - POST /items
+  - id: REQ-ITEM-02
+    area: items
+    scope: operation
+    statement: >-
+      GET /items/{id} for an item owned by the caller returns 200 and values identical
+      to the creation response.
+    appliesTo:
+      - GET /items/{id}
+  - id: REQ-ITEM-03
+    area: items
+    scope: operation
+    statement: >-
+      GET /items returns the caller's items in an {items,total,limit,offset} envelope
+      with limit defaulting to 20, offset to 0, and total equal to the caller's item
+      count.
+    appliesTo:
+      - GET /items
+  - id: REQ-ITEM-04
+    area: items
+    scope: operation
+    statement: >-
+      GET /items ordering is deterministic: ascending createdAt, ties broken by
+      ascending id; total counts all owned items regardless of the requested slice.
+    appliesTo:
+      - GET /items
+  - id: REQ-ITEM-05
+    area: items
+    scope: operation
+    statement: >-
+      limit and offset slice correctly; an offset beyond total returns an empty items
+      array with unchanged total; limit outside 1-100 or offset below 0 returns 400.
+    appliesTo:
+      - GET /items
+  - id: REQ-ITEM-06
+    area: items
+    scope: operation
+    statement: >-
+      PATCH /items/{id} applies only the supplied fields, returns 200 with the updated
+      representation, leaves untouched fields unchanged, preserves createdAt and
+      ownerId, advances updatedAt, and the change persists on re-read.
+    appliesTo:
+      - PATCH /items/{id}
+  - id: REQ-ITEM-07
+    area: items
+    scope: operation
+    statement: >-
+      DELETE /items/{id} for a caller-owned item returns 204 with an empty body, and a
+      subsequent GET of the same id returns 404 item_not_found.
+    appliesTo:
+      - DELETE /items/{id}
+  - id: REQ-ITEM-08
+    area: items
+    scope: operation
+    statement: >-
+      GET, PATCH and DELETE on an unknown id return 404 item_not_found; PATCH and
+      DELETE create and mutate nothing.
+    appliesTo:
+      - GET /items/{id}
+      - PATCH /items/{id}
+      - DELETE /items/{id}
+  - id: REQ-ITEM-09
+    area: items
+    scope: operation
+    statement: >-
+      PATCH with an empty object or no body returns 400 validation_failed; a no-op is
+      not accepted as success.
+    appliesTo:
+      - PATCH /items/{id}
+  - id: REQ-VAL-01
+    area: validation
+    scope: operation
+    statement: >-
+      name must be a string of 1-80 characters containing at least one non-whitespace
+      character; it is required on create and, when supplied on update, must satisfy
+      the same bounds. Missing on create, blank, too-long and non-string values return
+      400 validation_failed naming name. Leading and trailing whitespace is trimmed
+      before storage.
+    appliesTo:
+      - POST /items
+      - PATCH /items/{id}
+  - id: REQ-VAL-02
+    area: validation
+    scope: operation
+    statement: >-
+      price must be a number with 0 <= price <= 1000000 and at most two decimal
+      places; it is required on create and, when supplied on update, must satisfy the
+      same bounds. Missing on create, negative, over-limit, over-precision and string
+      values return 400 naming price, while 0 and 1000000 are accepted.
+    appliesTo:
+      - POST /items
+      - PATCH /items/{id}
+  - id: REQ-VAL-03
+    area: validation
+    scope: operation
+    statement: >-
+      quantity must be an integer in 0-10000; it is required on create and, when
+      supplied on update, must satisfy the same bounds. Missing on create, negative,
+      fractional, over-limit and string values return 400 naming quantity, while 0 and
+      10000 are accepted.
+    appliesTo:
+      - POST /items
+      - PATCH /items/{id}
+  - id: REQ-VAL-04
+    area: validation
+    scope: operation
+    statement: >-
+      description is optional and at most 500 characters, defaulting to "" on create;
+      category is optional and one of electronics, books, food or other, defaulting to
+      other on create. When supplied on update each is validated against the same
+      bounds and omitted values are preserved; invalid values return 400 naming the
+      field.
+    appliesTo:
+      - POST /items
+      - PATCH /items/{id}
+  - id: REQ-VAL-05
+    area: validation
+    scope: operation
+    statement: >-
+      Unknown request properties on create or update return 400 validation_failed
+      naming the property and are never silently ignored.
+    appliesTo:
+      - POST /items
+      - PATCH /items/{id}
+  - id: REQ-VAL-06
+    area: validation
+    scope: operation
+    statement: >-
+      A syntactically invalid JSON body returns 400 malformed_json; a non-JSON
+      Content-Type on a JSON endpoint returns 415 unsupported_media_type.
+    appliesTo:
+      - POST /auth/login
+      - POST /items
+      - PATCH /items/{id}
+  - id: REQ-VAL-07
+    area: validation
+    scope: operation
+    statement: >-
+      A request with several invalid fields returns one 400 whose errors[] contains an
+      entry for every invalid field, and no item is created or modified.
+    appliesTo:
+      - POST /items
+      - PATCH /items/{id}
+  - id: REQ-ISO-01
+    area: isolation
+    scope: operation
+    statement: >-
+      A second synthetic user cannot read, update or delete the first user's item:
+      each attempt returns 404 item_not_found, identical to a nonexistent id, and the
+      item remains unchanged.
+    appliesTo:
+      - GET /items/{id}
+      - PATCH /items/{id}
+      - DELETE /items/{id}
+  - id: REQ-ISO-02
+    area: isolation
+    scope: operation
+    statement: >-
+      A list request authenticated as the second user never contains the first user's
+      items at any limit or offset; when only foreign items exist, total is 0 and items
+      is empty.
+    appliesTo:
+      - GET /items
+  - id: REQ-ERR-01
+    area: errors
+    scope: global
+    statement: >-
+      Every error response has Content-Type application/problem+json and a body
+      satisfying the Problem schema; status equals the HTTP status and code is one of
+      the documented x-error-codes values.
+    appliesTo: []
+  - id: REQ-ERR-02
+    area: errors
+    scope: global
+    statement: >-
+      Error bodies contain no stack traces, filesystem paths, SQL, credentials or
+      undocumented properties (additionalProperties false on Problem and FieldError).
+    appliesTo: []
+  - id: REQ-ERR-03
+    area: errors
+    scope: global
+    statement: >-
+      Any unmatched route returns 404 route_not_found as application/problem+json
+      rather than HTML or an empty body.
+    appliesTo: []
+
+x-error-codes:
+  - code: validation_failed
+    status: 400
+    description: One or more request values are missing or outside their contract bounds.
+  - code: malformed_json
+    status: 400
+    description: The request body is not syntactically valid JSON.
+  - code: invalid_credentials
+    status: 401
+    description: Unknown username or wrong password at POST /auth/login.
+  - code: missing_token
+    status: 401
+    description: A protected endpoint was called without an Authorization header.
+  - code: invalid_token
+    status: 401
+    description: The bearer token is malformed, unknown or expired.
+  - code: item_not_found
+    status: 404
+    description: No item with this id is owned by the caller.
+  - code: route_not_found
+    status: 404
+    scope: global
+    description: No route matches the request path and method; not tied to a declared operation.
+  - code: unsupported_media_type
+    status: 415
+    description: The endpoint was called with a non-JSON Content-Type.

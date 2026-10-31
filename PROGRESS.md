@@ -1,8 +1,8 @@
 # Progress Log
 
-Current phase: 0 — setup
-Current task: AQL-100 (TODO) — OpenAPI contract and requirement IDs
-Last verified checkpoint: 2026-10-31T08:52Z — AQL-000 DONE: independent reviewer APPROVED (round 2); doctor 11/11, selftest 16/16, typecheck 0, four negative controls exit 1
+Current phase: 1 — contract
+Current task: AQL-200 (TODO) — local Inventory SUT and unit tests (G2)
+Last verified checkpoint: 2026-10-31T09:48Z — AQL-100 DONE: independent reviewer APPROVED (round 5, no open findings); contract:validate 21/21, contract:selftest 56/56, 63 instances, typecheck 0, doctor 11/11, harness:selftest 16/16, whole-file JSON.parse OK
 
 ## Important distinction
 The OpenCode role configuration and documentation scaffold were prepared externally. As of AQL-000, `harness/doctor.ts` has actually been executed locally and its output recorded below. **No SUT, API server, Playwright tests, mutation harness or remote GitHub Actions have been executed yet**, and no gate beyond the local portion of G0 has been claimed.
@@ -34,6 +34,42 @@ The OpenCode role configuration and documentation scaffold were prepared externa
 | 2026-10-31T08:52Z | AQL-000 | `git status --short; ls harness/` (final tree check) | 0 | PASS — no stray probe files; 4 tracked modifications + 7 untracked additions, none committed | terminal output |
 | 2026-10-31T08:52Z | AUDIT (post-DONE, user-requested) | `npm run`; `npm run harness:doctor`; `npm run harness:selftest`; `npm run typecheck` | 0,0,0,0 | PASS — 3 of 3 existing scripts executed successfully | `evidence/generated/aql-scripts-20261031T0852Z/` |
 | 2026-10-31T08:52Z | AUDIT (post-DONE, user-requested) | `npm run test`; `test:unit`; `test:api`; `harness:eval`; `lint` | 1 each | BLOCKED — `npm error Missing script` for all five; recorded as absent, not as failing tests | same evidence dir, `absent-*.log` |
+| 2026-10-31T09:13Z | AQL-100 | `git status --porcelain`; `npm run harness:doctor`; `harness:selftest`; `typecheck` | 0,0,0,0 | PASS — resume baseline: clean tree at `f82a0c8`; doctor 11 pass, selftest 16 pass, typecheck clean; AQL-000 checkpoint reconfirmed | terminal output |
+| 2026-10-31T09:16Z | AQL-100 | `npm install --save-dev yaml@2.9.1 @apidevtools/swagger-parser@13.1.0` | 0 | PASS — 16 packages added, 0 vulnerabilities; local YAML parse + OpenAPI 3.1 meta-schema validation with no runtime network | `package.json`, `package-lock.json` |
+| 2026-10-31T09:17Z | AQL-100 | `npm run contract:validate` (first run) | 1 | FAIL (tool defect, not contract) — `contract.operations` reported all seven operations "missing" because the new checker compared uppercase labels against lowercase method keys; contract itself had passed structure/security/requirement checks | terminal output |
+| 2026-10-31T09:17Z | AQL-100 (fix) | `npm run typecheck`; `npm run contract:validate` | 0,0 | PASS — case bug fixed; 15/15 checks pass | `evidence/generated/aql-100-contract-20261031T0917Z/` |
+| 2026-10-31T09:17Z | AQL-100 | `node harness/contract-check.ts --json` | 0 | PASS — `ok=true`, summary `{pass:15,fail:0}` | evidence dir, `contract-validate.json` |
+| 2026-10-31T09:17Z | AQL-100 | `npm run contract:selftest` | 0 | PASS — 24/24; baseline accepted, 23 targeted mutations rejected for the intended rule (3.1 downgrade, dropped security, dropped 401/Location/challenge, unknown/duplicate/unused requirement, external server, permissive schema, weakened bounds, 204 with body, wrong media type, status-mismatched and orphan error codes, empty registry) | evidence dir, `contract-selftest.log` |
+| 2026-10-31T09:18Z | AQL-100 | `npm run typecheck` | 0 | PASS — strict + nodenext + verbatimModuleSyntax + erasableSyntaxOnly, no diagnostics | evidence dir, `typecheck.log` |
+| 2026-10-31T09:18Z | AQL-100 (regression) | `npm run harness:doctor` | 0 | PASS — 11 pass, 0 warn, 0 fail after adding contract files | evidence dir, `doctor.log` |
+| 2026-10-31T09:18Z | AQL-100 (regression) | `npm run harness:selftest` | 0 | PASS — 16 pass, 0 fail | evidence dir, `harness-selftest.log` |
+| 2026-10-31T09:21Z | AQL-100 | Independent review round 1 (reviewer subagent `ses_e6ebf0dfcffdnQiMXMTgC6G4p0`) | CHANGES_REQUESTED | FAIL — 5 MEDIUM findings: name/PATCH normative ambiguity; six contract weakenings the validator accepted; incomplete operation-set and server-override checks; self-test did not assert the intended failing rule; requirement applicability incomplete | `reviews/AQL-100.md` |
+| 2026-10-31T09:23Z | AQL-100 (review fix) | `npm run typecheck` | 0 | PASS — after expanding rule set and self-test | terminal output |
+| 2026-10-31T09:24Z | AQL-100 (review fix) | `npm run contract:validate` | 0 | PASS — 18 checks: new `contract.requests`, `contract.error-coverage`, `contract.error-schema`; PATCH/Item bounds; exact `appliesTo` matrix; all-method operation set; path/operation server overrides rejected | `evidence/generated/aql-100-contract-r2-20261031T0925Z/contract-validate.log` |
+| 2026-10-31T09:25Z | AQL-100 (review fix) | `npm run contract:selftest` | 0 | PASS — 36/36; every reject case now declares `expectFailCheck` and the runner asserts that exact check failed; regression controls added for all six reviewer-reproduced weakenings, server overrides, extra `PUT`, applicability drift and name pattern | evidence dir r2, `contract-selftest.log` |
+| 2026-10-31T09:25Z | AQL-100 (review fix) | `node harness/contract-check.ts --json` | 0 | PASS — `ok=true`, summary `{pass:18,fail:0}` | evidence dir r2, `contract-validate.json` |
+| 2026-10-31T09:25Z | AQL-100 (regression) | `npm run harness:doctor`; `npm run harness:selftest` | 0,0 | PASS — 11/11 and 16/16 after contract changes | evidence dir r2, `doctor.log`, `harness-selftest.log` |
+| 2026-10-31T09:31Z | AQL-100 | Independent review round 2 (same reviewer session `ses_e6ebf0dfcffdnQiMXMTgC6G4p0`) | CHANGES_REQUESTED | FAIL — round-1 reproductions fixed (6/6 now fail at intended check), but 5 new findings: R2-1 type/effective-boundary gaps, R2-2 header/media/conditional gaps, R2-3 malformed global appliesTo, R2-4 check-ID causal-attribution limit, R2-5 stale README/PROGRESS wording | `reviews/AQL-100.md` (round-2 verbatim) |
+| 2026-10-31T09:32Z | AQL-100 (review fix) | `npm install --save-dev ajv@8.17.1` | 0 | PASS — AJV 2020-12 added for effective-schema instance checks; 0 vulnerabilities | `package.json`, `package-lock.json` |
+| 2026-10-31T09:32Z | AQL-100 (review fix) | `npm run typecheck` | 0 | PASS — after AJV instance checks + header/example/strict-appliesTo/diagnostic assertions | terminal output |
+| 2026-10-31T09:32Z | AQL-100 (review fix) | `npm run contract:validate` | 0 | PASS — 21 checks: new `contract.headers`, `contract.examples`, `contract.instances` (40 AJV probes); strict `appliesTo` array; JSON-only bodies; exact Problem conditional | `evidence/generated/aql-100-contract-r3-20261031T0932Z/contract-validate.log` |
+| 2026-10-31T09:32Z | AQL-100 (review fix) | `npm run contract:selftest` | 0 | PASS — 49/49 (1 baseline + 48 negative); every reject asserts `expectFailCheck`, targeted subrules also assert `expectFailDetail`; 13 new R2 regression controls | evidence dir r3, `contract-selftest.log` |
+| 2026-10-31T09:32Z | AQL-100 (review fix) | `node harness/contract-check.ts --json` | 0 | PASS — `ok=true`, summary `{pass:21,fail:0}` | evidence dir r3, `contract-validate.json` |
+| 2026-10-31T09:32Z | AQL-100 (review fix) | builder in-memory probe of 11 R2 mutations (4× type/bounds, 4× header/media/conditional, malformed appliesTo, example mismatch, + 1 more) | 0 | PASS — all 11 REJECTED at the intended check (`contract.instances`, `contract.boundaries`, `contract.headers`, `contract.requests`, `contract.error-schema`, `contract.requirement-registry`, `contract.examples`) | evidence dir r3, `builder-independent-mutation-probe.log` |
+| 2026-10-31T09:32Z | AQL-100 (regression) | `npm run harness:doctor`; `npm run harness:selftest`; `npm run typecheck` | 0,0,0 | PASS — 11/11, 16/16, 0 diagnostics after contract changes | evidence dir r3, `doctor.log`, `harness-selftest.log`, `typecheck.log` |
+| 2026-10-31T09:33Z | AQL-100 | Independent review round 3 (same reviewer session `ses_e6ebf0dfcffdnQiMXMTgC6G4p0`) | CHANGES_REQUESTED | FAIL — round-2 reproductions fixed (63-instance wording aside, all prior mutations now fail with relevant diagnostics), but 2 new MEDIUM findings: R3-1 operation-level header references bypass component checks; R3-2 operation-level `$ref`-sibling schemas + PATCH max-price/field-type gaps, docs overclaim 40-instance universality | `reviews/AQL-100.md` (round-3 verbatim) |
+| 2026-10-31T09:40Z | AQL-100 (review fix) | `npm run typecheck` | 0 | PASS — after header-reference + sibling + operation-instance fixes | terminal output |
+| 2026-10-31T09:40Z | AQL-100 (review fix) | `npm run contract:validate` | 0 | PASS — 21 checks; `contract.headers` enforces exact header refs at each applicable response, `contract.requests`/`contract.success-shapes` reject `$ref` siblings, `contract.instances` 63 probes (component + POST /items operation schemas) | `evidence/generated/aql-100-contract-r4-20261031T0940Z/contract-validate.log` |
+| 2026-10-31T09:40Z | AQL-100 (review fix) | `npm run contract:selftest` | 0 | PASS — 56/56 (1 baseline + 55 negative); 7 new R3 regression controls with `expectFailDetail` | evidence dir r4, `contract-selftest.log` |
+| 2026-10-31T09:40Z | AQL-100 (review fix) | `node harness/contract-check.ts --json` | 0 | PASS — `ok=true`, summary `{pass:21,fail:0}` | evidence dir r4, `contract-validate.json` |
+| 2026-10-31T09:40Z | AQL-100 (review fix) | builder in-memory probe of 7 R3 mutations (3× header usage, 2× `not:{}` siblings, PATCH max + numeric desc) | 0 | PASS — all 7 REJECTED at intended checks (`contract.headers`, `contract.requests`, `contract.success-shapes`, `contract.instances`) | evidence dir r4, `builder-r3-mutation-probe.log` |
+| 2026-10-31T09:40Z | AQL-100 (regression) | `npm run harness:doctor`; `npm run harness:selftest` | 0,0 | PASS — 11/11 and 16/16 after contract changes | evidence dir r4, `doctor.log`, `harness-selftest.log` |
+| 2026-10-31T09:41Z | AQL-100 | Independent review round 4 (same reviewer session `ses_e6ebf0dfcffdnQiMXMTgC6G4p0`) | CHANGES_REQUESTED (evidence only) | PASS on implementation (7/7 R3 mutations rejected at intended checks, 63 instances, docs scoped); FAIL on evidence — `contract-validate.json` in r4 mixes 6 AJV stderr warnings + JSON, whole-file `JSON.parse` fails; CLI itself outputs valid JSON when streams separated | `reviews/AQL-100.md` (round-4 verbatim) |
+| 2026-10-31T09:47Z | AQL-100 (evidence fix) | `node harness/contract-check.ts --json > contract-validate.json 2> contract-validate.stderr.log` | 0 | PASS — `contract-validate.json` is pure JSON; 6 `unknown format` warnings isolated in `contract-validate.stderr.log` | `evidence/generated/aql-100-contract-r5-20261031T0947Z/contract-validate.json`, `.stderr.log` |
+| 2026-10-31T09:47Z | AQL-100 (evidence fix) | `node -e 'JSON.parse(readFileSync(json))'` whole-file strict check | 0 | PASS — `JSON.parse OK: pass=21 fail=0 ok=true checks=21` | evidence dir r5, `json-parse-check.log` |
+| 2026-10-31T09:47Z | AQL-100 (evidence fix) | `npm run contract:validate`; `npm run contract:selftest`; `npm run typecheck`; `npm run harness:doctor`; `npm run harness:selftest` (separated streams) | 0,0,0,0,0 | PASS — 21/21, 56/56, 0 diagnostics, 11/11, 16/16; no code change from r4 | evidence dir r5, `*.log` + `*.stderr.log` + `exit-codes.txt` |
+| 2026-10-31T09:48Z | AQL-100 | Independent verification round 5 (same reviewer session `ses_e6ebf0dfcffdnQiMXMTgC6G4p0`) | APPROVED | PASS — whole-file JSON.parse OK (21/0/true/21), stderr has exactly 6 AJV warnings, 21/56/0/11/16 reruns match; no open blocking findings; G1 PASS locally | `reviews/AQL-100.md` (round-5 verbatim) |
+| 2026-10-31T09:48Z | AQL-100 | Mark DONE (gates passed + APPROVED + evidence recorded) | — | DONE — TASKS.md AQL-100 REVIEW_REQUIRED → DONE; next unblocked task AQL-200 TODO | `TASKS.md`, `reviews/AQL-100.md` |
 
 ### G0 status (local portion)
 | Requirement | Status | Basis |
@@ -99,6 +135,8 @@ The exit code 1 in rows 5–9 is npm reporting a missing script, not a failing t
 
 Remote CI: **NOT VERIFIED** — no workflow file exists and no GitHub Actions run was observed. No CI success is claimed.
 
+> The G1–G6 rows above are the audit state **as of 2026-10-31T08:52Z**. G1 has since been implemented; see "Gate G1 — contract (AQL-100)" below. G2–G6 remain BLOCKED / NOT VERIFIED.
+
 ### What this audit does not prove
 - That the SUT or test suite works — neither exists at `9015b72`.
 - That the harness is complete — only the preflight doctor and its self-test exist.
@@ -112,5 +150,105 @@ Remote CI: **NOT VERIFIED** — no workflow file exists and no GitHub Actions ru
 - Disposition: this audit concerns post-completion AQL-000 verification. Prior round-2 APPROVED evidence remains in `reviews/AQL-000.md`; AQL-000 stays DONE. AQL-100 remains TODO, the next unblocked implementation task. No new implementation was requested or performed in this follow-up.
 - Future review requests must explicitly name the task and its REVIEW_REQUIRED handoff. Remote CI remains NOT VERIFIED.
 
+## Gate G1 — contract (AQL-100, REVIEW_REQUIRED)
+
+Status: local checks PASS; independent review round 5 **APPROVED** — no open blocking findings. AQL-100 is **DONE**.
+
+| G1 requirement | Status | Basis |
+| --- | --- | --- |
+| OpenAPI 3.1 contract parses | PASS | `contract:validate` check `contract.structure` runs swagger-parser meta-schema validation on `contract/openapi.yaml`; `contract.version` pins 3.1.x |
+| Requirement IDs declared and linked | PASS | 28 requirements across 6 areas; each declares `appliesTo` (must be an array, including globals); 45 operation links must match the matrix exactly (missing and extra links both fail) |
+| Validation and boundaries declared | PASS | `contract.boundaries` + `contract.instances`: create/update `name` 1–80 with `\S` pattern, price 0–1,000,000, quantity 0–10,000 integer, description ≤500/default "", category enum/default, limit integer 1–100 default 20, offset ≥0 default 0, update `minProperties: 1` and no required fields; 63 AJV 2020-12 instances (component + POST /items operation-level schemas, PATCH max-price/field-type probes) |
+| Auth declared | PASS | root `bearerAuth`; health/login override to `security: []`; all five item operations require bearer and document 401 + `WWW-Authenticate: Bearer`; AUTH-04/05 applied to every protected operation |
+| Cross-user isolation declared | PASS | 404 `item_not_found` is the single response for foreign and nonexistent ids (D009); REQ-ISO-01 (read/update/delete) and REQ-ISO-02 (list only) are separate assertions |
+| Error semantics declared | PASS | `application/problem+json` `Problem`/`FieldError`; 8 registered codes; 16 error responses checked for media type, Problem `$ref`, registered code and matching status; orphan codes and missing 404/415/400 coverage rejected; `contract.error-schema` requires non-empty `errors[]` + exact `validation_failed` conditional (positive/negative instances) |
+| Request/response shapes declared | PASS | `contract.requests` requires JSON-only bodies with exact `$ref` and no siblings (login/create/update); `contract.success-shapes` requires exact `$ref` with no siblings (health, login token, list, create+Location, get, patch) and empty 204; `contract.headers` requires exact `#/components/headers/*` refs at POST /items 201, login 401, shared Unauthorized and every protected 401 plus component semantics; `contract.examples` validates example status against its response |
+| Fail-closed verification | PASS | `contract:selftest` 56/56 — 1 baseline + 55 targeted mutations each rejected **at the declared check id** (targeted subrules also assert a diagnostic substring); includes all round-1, round-2 and round-3 reviewer reproductions |
+| Independent review | APPROVED (round 5) | No open blocking findings across rounds 1–5; R4-1 verified resolved; full text in `reviews/AQL-100.md` |
+
+**G1: PASS (local checks + independent APPROVED).** Remote CI remains NOT VERIFIED.
+
+### Handoff — AQL-100 (post round-1 fixes)
+
+- Added: `contract/openapi.yaml`, `harness/contract-rules.ts`, `harness/contract-check.ts`, `harness/contract.selftest.ts`.
+- Modified: `package.json` (two scripts + two devDependencies), `package-lock.json`, `contract/README.md`, `DECISIONS.md` (D008–D011), `PROGRESS.md`, `TASKS.md`.
+- Review record: `reviews/AQL-100.md` (round 1 verbatim + finding-by-finding disposition).
+- Evidence: `evidence/generated/aql-100-contract-r2-20261031T0925Z/` (gitignored) — `contract-validate.log`, `contract-validate.json`, `contract-selftest.log`, `typecheck.log`, `doctor.log`, `harness-selftest.log`, `exit-codes.txt`, `environment.txt`. The earlier `aql-100-contract-20261031T0917Z/` run is retained unedited as round-1 evidence.
+- Reproduce with:
+  ```sh
+  npm run contract:validate    # 18 pass, 0 fail, exit 0
+  npm run contract:selftest    # 36 pass, 0 fail, exit 0
+  npm run typecheck            # exit 0
+  ```
+
+### Handoff — AQL-100 (post round-2 fixes, REVIEW_REQUIRED)
+
+- Added since round 2: AJV `contract.instances` (40 probes), `contract.headers`, `contract.examples`; strict `appliesTo` array; JSON-only bodies; exact Problem conditional; `expectFailDetail` diagnostics; `ajv` devDependency + `contract:validate`/`contract:selftest` scripts already present.
+- Modified: `contract/openapi.yaml`, `harness/contract-rules.ts`, `harness/contract.selftest.ts`, `package.json`, `package-lock.json`, `contract/README.md` (21 checks / 1 baseline + 48 controls, raw-value bounds), `DECISIONS.md` (D010 guarantee + AJV + history), `PROGRESS.md`, `reviews/AQL-100.md` (round-2 verbatim + disposition).
+- Review record: `reviews/AQL-100.md` (rounds 1–2 verbatim + finding-by-finding dispositions for R2-1…R2-5).
+- Evidence: `evidence/generated/aql-100-contract-r3-20261031T0932Z/` (gitignored) — `contract-validate.log` (21/21), `contract-validate.json` (`{pass:21,fail:0}`), `contract-selftest.log` (49/49), `builder-independent-mutation-probe.log` (11/11 reviewer-mutation reproductions REJECTED at intended checks), `typecheck.log`, `doctor.log` (11/11), `harness-selftest.log` (16/16), `exit-codes.txt` (all 0), `environment.txt`. Earlier `aql-100-contract-20261031T0917Z/` and `aql-100-contract-r2-20261031T0925Z/` retained unedited.
+- Reproduce with:
+  ```sh
+  npm run contract:validate    # 21 pass, 0 fail, exit 0
+  npm run contract:selftest    # 49 pass, 0 fail, exit 0
+  npm run typecheck            # exit 0
+  ```
+- Not committed or pushed: awaiting user approval per `AGENTS.md`.
+- Known limitations:
+  - The validator checks the document, not SUT behavior. Nothing here proves an endpoint works.
+  - `price` uses JSON Schema `multipleOf: 0.01` as documentation of intent; JSON Schema float `multipleOf` is unreliable for instance validation, so AQL-300 must assert 2-decimal rejection behaviorally against the SUT.
+  - `x-requirements`/`x-error-codes` are OpenAPI extensions: generic tooling ignores them; this repository's validator is what enforces them.
+  - `problem+json` field-level code vocabulary (`required`, `blank`, `too_long`, `wrong_type`, `out_of_range`, `too_many_decimals`, `invalid_enum`, `unknown_property`) is described in the schema but not enumerated as an `enum`; tests will pin the observed codes.
+  - Operation coverage is an explicit constant: adding a contract endpoint requires updating the operation list, required error-status matrix, request-body and success-shape expectations together. This is deliberate, but it is not derived automatically.
+
+### Handoff — AQL-100 (post round-3 fixes, REVIEW_REQUIRED)
+
+- Added since round 3: exact header-reference enforcement at each applicable response, `$ref`-sibling rejection, POST /items operation-level instance schemas, PATCH max-price + numeric-description probes, Item response samples (63 instances total), 7 R3 regression controls (56 cases total).
+- Modified: `harness/contract-rules.ts`, `harness/contract.selftest.ts`, `contract/README.md` (21 checks / 1 baseline + 55 controls, 63 instances, scoped claims), `DECISIONS.md` (D010 56-case + 63-instance + R3 history), `PROGRESS.md`, `reviews/AQL-100.md` (round-3 verbatim + disposition).
+- Review record: `reviews/AQL-100.md` (rounds 1–3 verbatim + finding-by-finding dispositions for R3-1…R3-2).
+- Evidence: `evidence/generated/aql-100-contract-r4-20261031T0940Z/` (gitignored) — `contract-validate.log` (21/21), `contract-validate.json` (`{pass:21,fail:0}`), `contract-selftest.log` (56/56), `builder-r3-mutation-probe.log` (7/7 R3 reproductions REJECTED at intended checks), `typecheck.log`, `doctor.log` (11/11), `harness-selftest.log` (16/16), `exit-codes.txt` (all 0), `environment.txt`. Earlier `aql-100-contract-20261031T0917Z/`, `aql-100-contract-r2-20261031T0925Z/`, `aql-100-contract-r3-20261031T0932Z/` retained unedited.
+- Reproduce with:
+  ```sh
+  npm run contract:validate    # 21 pass, 0 fail, exit 0
+  npm run contract:selftest    # 56 pass, 0 fail, exit 0
+  npm run typecheck            # exit 0
+  ```
+- Not committed or pushed: awaiting user approval per `AGENTS.md`.
+- Known limitations:
+  - The validator checks the document, not SUT behavior. Nothing here proves an endpoint works.
+  - `price` uses JSON Schema `multipleOf: 0.01` as documentation of intent; JSON Schema float `multipleOf` is unreliable for instance validation, so AQL-300 must assert 2-decimal rejection behaviorally against the SUT.
+  - `x-requirements`/`x-error-codes` are OpenAPI extensions: generic tooling ignores them; this repository's validator is what enforces them.
+  - `problem+json` field-level code vocabulary (`required`, `blank`, `too_long`, `wrong_type`, `out_of_range`, `too_many_decimals`, `invalid_enum`, `unknown_property`) is described in the schema but not enumerated as an `enum`; tests will pin the observed codes.
+  - Operation coverage is an explicit constant: adding a contract endpoint requires updating the operation list, required error-status matrix, request-body and success-shape expectations together. This is deliberate, but it is not derived automatically.
+  - The 63 instances establish their tested cases, not universal protection against every possible schema contradiction; unknown `format` values (`uuid`, `date-time`) are ignored by AJV without `ajv-formats` and are therefore documented, not instance-enforced.
+
+### Handoff — AQL-100 (post round-4 evidence fix, REVIEW_REQUIRED)
+
+- No code change from round-4: `contract/openapi.yaml`, `harness/*`, `contract/README.md`, `DECISIONS.md` unchanged (R3-1/R3-2 already approved in round-4 verbatim).
+- Fixed: evidence capture now separates stdout/stderr; `contract-validate.json` is whole-file `JSON.parse`-clean.
+- Review record: `reviews/AQL-100.md` (rounds 1–4 verbatim + dispositions for R3-1…R4-1).
+- Evidence: `evidence/generated/aql-100-contract-r5-20261031T0947Z/` (gitignored) — `contract-validate.log` (21/21), `contract-validate.json` (pure JSON `{pass:21,fail:0}`), `contract-validate.stderr.log` (6 AJV warnings), `json-parse-check.log` (`JSON.parse OK`), `contract-selftest.log` (56/56) + `.stderr.log`, `typecheck.log`, `doctor.log` (11/11), `harness-selftest.log` (16/16), `builder-r3-mutation-probe.log` (7/7 REJECTED), `exit-codes.txt` (all 0), `environment.txt`. Earlier r1–r4 dirs retained unedited (r4 preserves the mixed-stream defect for audit).
+- Reproduce with:
+  ```sh
+  npm run contract:validate    # 21 pass, 0 fail, exit 0
+  npm run contract:selftest    # 56 pass, 0 fail, exit 0
+  npm run typecheck            # exit 0
+  node harness/contract-check.ts --json > /tmp/aql.json 2> /tmp/aql.stderr.log
+  node -e 'JSON.parse(require("node:fs").readFileSync("/tmp/aql.json","utf8")); console.log("JSON OK")'
+  ```
+- Not committed or pushed: awaiting user approval per `AGENTS.md`.
+- Known limitations: same as post round-3 handoff (document-only validator; `multipleOf` intent behavioral in AQL-300; `x-*` extensions enforced by this repo; field-error vocabulary not enum; explicit operation constants; 63 instances cover tested cases; `uuid`/`date-time` formats ignored without `ajv-formats` — warnings now isolated in `*.stderr.log`).
+
 ## Next action
-Start AQL-100 — design `contract/openapi.yaml` (OpenAPI 3.1) with requirement IDs before any SUT or QA code, satisfying G1: validation, auth, cross-user isolation, error semantics and boundaries.
+AQL-100 is DONE. Start AQL-200 — implement the local Inventory SUT against this contract with unit tests (G2). No commit/push without user approval.
+
+## Handoff — AQL-100 (DONE)
+
+- Scope: normative OpenAPI 3.1 contract + fail-closed validator + 56-case self-test. No SUT, Playwright, mutation harness or CI claimed.
+- Files: `contract/openapi.yaml` (28 reqs, 8 codes, 7 ops), `harness/contract-rules.ts`, `harness/contract-check.ts`, `harness/contract.selftest.ts`; modified `package.json` (+`yaml`, `swagger-parser`, `ajv`), `package-lock.json`, `contract/README.md`, `DECISIONS.md` (D008–D011), `PROGRESS.md`, `TASKS.md`.
+- Verification: `npm run contract:validate` 21/21 exit 0; `npm run contract:selftest` 56/56 exit 0 (every reject asserts `expectFailCheck`, targeted assert `expectFailDetail`); `contract.instances` 63 probes; `npm run typecheck` 0; `npm run harness:doctor` 11/11; `npm run harness:selftest` 16/16; whole-file `JSON.parse` of `contract-validate.json` OK.
+- Review history: round 1 CHANGES_REQUESTED (5 MEDIUM) → fixed; round 2 CHANGES_REQUESTED (2 MEDIUM+3 LOW) → fixed; round 3 CHANGES_REQUESTED (2 MEDIUM) → fixed; round 4 CHANGES_REQUESTED (evidence only R4-1) → fixed with separated streams; round 5 APPROVED. Full verbatim in `reviews/AQL-100.md`.
+- Evidence: `evidence/generated/aql-100-contract-r5-20261031T0947Z/` (gitignored) + retained r1–r4 dirs (r4 preserves the mixed-stream defect for audit).
+- Diff/commit reference: uncommitted increment at `f82a0c8` (no commit/push per scope control); inspect with `git status --short`, `git diff --stat`.
+- Known limitations: validator is document-only; `multipleOf:0.01` intent needs behavioral AQL-300 tests; `x-*` extensions enforced only by this repo; field-error vocabulary not enum; explicit operation constants; 63 instances cover tested cases; `uuid`/`date-time` formats ignored (warnings in `*.stderr.log`).
+- Explicit request: independent `@reviewer` audit already returned APPROVED for AQL-100 (session `ses_e6ebf0dfcffdnQiMXMTgC6G4p0`); no further review pending for this task. Do not pretend additional review ran beyond what is persisted in `reviews/AQL-100.md`.

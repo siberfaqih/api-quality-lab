@@ -10,12 +10,17 @@
   "scripts": {
     "harness:doctor": "node harness/doctor.ts",
     "harness:selftest": "node harness/doctor.selftest.ts",
+    "contract:validate": "node harness/contract-check.ts",
+    "contract:selftest": "node harness/contract.selftest.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "^13.1.0",
     "@types/node": "^26.6.6",
     "@types/semver": "^7.8.0",
+    "ajv": "^8.20.0",
     "semver": "^7.8.5",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "yaml": "^2.9.1"
   }
 }
