@@ -10,7 +10,7 @@ permission:
     "git status*": allow
     "git diff*": allow
     "git log*": allow
-    "git push*": deny
+    "git push*": ask
   task:
     "*": deny
     "reviewer": ask
