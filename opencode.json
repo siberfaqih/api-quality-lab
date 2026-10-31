@@ -4,22 +4,5 @@
   "permission": {
     "external_directory": "deny",
     "bash": "ask"
-  },
-  "plugins": [
-    {
-      "package": "./.opencode/plugins/model-fallback",
-      "options": {
-        "routes": {
-          "builder": {
-            "primary": "opencode/deepseek-v4.1-flash-free",
-            "fallback": "meta/muse-spark-1.3-contributor"
-          },
-          "reviewer": {
-            "primary": "openai/gpt-6.1-sol",
-            "fallback": "meta/muse-wonder-1.0"
-          }
-        }
-      }
-    }
-  ]
+  }
 }
