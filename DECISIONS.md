@@ -27,4 +27,13 @@
   - Alternatives: JWT with claims (adds signing/key handling with no QA benefit); random users per run (breaks the fixed synthetic-user requirement); hard-coded single port (collides with other local services).
   - Rationale: opaque tokens keep the SUT intentionally simple while still exercising missing/invalid/valid token paths; two fixed users make cross-user isolation and fixture reset deterministic. Port 3000 is a documented default, not a constraint on the test runner.
 
+- **D012 (adopted for AQL-200):** Synthetic credentials are `alice` / `alice-password` (`usr_alice`) and `bob` / `bob-password` (`usr_bob`), documented in `sut/README.md`; the SUT is a dependency-free Node `http` server with per-instance in-memory state.
+  - Alternatives: hashed/secret-managed credentials (no benefit for local synthetic users; hides the fixture); a web framework such as Express/Fastify (extra dependency for seven operations); persistent file/database storage (state leaks between runs, breaks deterministic isolation).
+  - Rationale: the contract names the users but not their passwords, so the passwords are fixed synthetic fixtures recorded here and in `sut/README.md`. Plaintext comparison is acceptable only because these are local synthetic accounts. In-memory state makes fixture reset deterministic: a fresh server instance or `reset()` starts empty, and start/stop is the isolation boundary the QA suite controls.
+  - Token expiry: `expiresIn` is 3600 seconds and is enforced against issuance time. Enforcement is implemented in `authenticate()` and exercised by a deterministic fake-clock unit test (`InventoryServerOptions.now`/`tokenTtlSeconds`), not by waiting in tests.
+
+- **D013 (adopted for AQL-200, user instruction):** Every update that is committed and pushed also updates the GitHub `README.md` in the same commit, so the public status always matches the pushed code.
+  - Alternatives: README updated in a later docs-only commit (public page can describe code that is not there yet, or lag behind it); a generated status badge fed by CI (no CI exists until AQL-500, and a badge cannot carry the honest "not verified" nuance this project requires).
+  - Rationale: this is a portfolio repository; a stale README is a false claim about the work. The status table distinguishes DONE / REVIEW_REQUIRED / TODO / NOT VERIFIED per gate instead of a single optimistic summary.
+
 Record material deviations with alternatives, rationale and evidence.

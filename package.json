@@ -12,6 +12,8 @@
     "harness:selftest": "node harness/doctor.selftest.ts",
     "contract:validate": "node harness/contract-check.ts",
     "contract:selftest": "node harness/contract.selftest.ts",
+    "sut:start": "node sut/src/server.ts",
+    "test:unit": "node --test sut/app.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

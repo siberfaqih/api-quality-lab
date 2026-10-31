@@ -1,28 +1,109 @@
-# API Quality Lab — OpenCode Starter Scaffold
+# API Quality Lab
 
-**Setup only.** This archive initializes OpenCode custom roles, project rules, commands, and persistent harness documents. It now also contains the Phase 0 toolchain bootstrap (`package.json`, `tsconfig.json`, `harness/doctor.ts`), but NOT yet a functioning Inventory API, test suite, or working evaluator.
+Portfolio-grade REST API QA automation framework for a demo Inventory API,
+built contract-first with OpenCode builder/reviewer agents. The QA framework
+is the product; the system under test (SUT) is intentionally simple.
 
-## Phase 0 check
+> This README is updated in the same commit as every pushed change, so what
+> you read here describes the code in this repository — including what is
+> **not** built yet.
+
+## Status
+
+| Phase | Deliverable | Gate | Status |
+| --- | --- | --- | --- |
+| 0 | Node/TypeScript bootstrap, `harness:doctor` | G0 | ✅ DONE — doctor 11/11, selftest 16/16, reviewer APPROVED |
+| 1 | OpenAPI 3.1 contract + requirement IDs | G1 | ✅ DONE — `contract:validate` 21/21, `contract:selftest` 56/56, reviewer APPROVED (round 5) |
+| 2 | Local Inventory SUT + SUT unit tests | G2 | ✅ DONE — unit tests 29/29, start/stop smoke verified, reviewer APPROVED (round 2, after round-1 fixes) |
+| 3 | 22+ Playwright API tests + traceability | G3 | ⬜ TODO |
+| 4 | Mutation evaluation harness (3 mutants) | G4 | ⬜ TODO |
+| 5 | GitHub Actions CI + HTML/JUnit reports | G5 | ⬜ TODO (no remote CI run observed yet) |
+| 6 | Simulated defect report + case study | G6 | ⬜ TODO |
+
+Task board: [`TASKS.md`](TASKS.md) · Execution log with exact commands and
+exit codes: [`PROGRESS.md`](PROGRESS.md) · Review reports: [`reviews/`](reviews/)
+
+## Quick start
+
+Requires Node.js 24 and Git.
+
 ```sh
 npm install
-npm run harness:doctor   # 11 preflight checks, exits non-zero on failure
+npm run harness:doctor     # 11 preflight checks
+npm run contract:validate  # 21 contract checks against contract/openapi.yaml
+npm run test:unit          # 29 SUT tests on an ephemeral port
 npm run typecheck
 ```
 
-## First launch
-1. Install stable OpenCode, Node.js 24 and Git.
-2. Connect your selected provider in OpenCode (`/connect`), choose a model (`/models`).
-3. From this repository directory, run `opencode agent list` and check for `builder` and `reviewer`.
-4. Run `opencode` and enter `/aql-next` to implement Phase 0.
-5. After a task is `REVIEW_REQUIRED`, use `/aql-review` to invoke the read-only Reviewer.
-6. Builder saves the returned findings to `reviews/<task-id>.md`, fixes blocking findings, then re-checks the gate.
-7. Use `/aql-resume` after interruption.
+Run the SUT:
 
-## Model selection
-Model IDs are not hardcoded. Set the model interactively first. To assign a different model per role, add `model: provider/model-id` to that role's YAML frontmatter, using the exact ID from your OpenCode `/models` list. This avoids guessing provider availability.
+```sh
+npm run sut:start          # http://127.0.0.1:3000 (PORT=3100 to override)
+```
 
-## Scope
-Node 24, TypeScript, Playwright APIRequestContext, minimal Inventory SUT, OpenAPI contract, 22+ meaningful tests, mutation verification, GitHub Actions and a case study grounded in real evidence.
+Synthetic users (local fixtures only, see `sut/README.md`):
 
-## Quality reminder
-A Markdown task status is not executable verification. Do not claim G0-G6 PASS before code and actual test runs substantiate the result.
+| username | password         |
+| -------- | ---------------- |
+| `alice`  | `alice-password` |
+| `bob`    | `bob-password`   |
+
+```sh
+TOKEN=$(curl -s -X POST http://127.0.0.1:3000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","password":"alice-password"}' | jq -r .token)
+curl -s -X POST http://127.0.0.1:3000/items \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"name":"Widget","price":19.99,"quantity":5}'
+```
+
+State is in-memory per server instance: restarting the SUT resets all
+items and tokens. There is deliberately no reset endpoint in the contract.
+
+## Scripts
+
+| Script | What it does |
+| --- | --- |
+| `npm run harness:doctor` | Preflight environment/config checks (fails closed) |
+| `npm run harness:selftest` | Negative controls proving the doctor can fail |
+| `npm run contract:validate` | Fail-closed validation of `contract/openapi.yaml` (21 checks, 63 schema instances) |
+| `npm run contract:selftest` | 56-case mutation self-test of the contract validator |
+| `npm run sut:start` | Start the Inventory SUT |
+| `npm run test:unit` | SUT unit/API tests (`node --test`, 29 cases titled by requirement ID) |
+| `npm run typecheck` | `tsc --noEmit` (strict, `erasableSyntaxOnly`) |
+
+## Project layout
+
+```text
+contract/   Normative OpenAPI 3.1 contract (source of truth, written first)
+sut/        Minimal Inventory API (Node http, no dependencies) + unit tests
+qa/         Playwright API tests — AQL-300, not started
+harness/    Doctor, contract validator and (later) mutation evaluator
+docs/       Test plan and case-study material
+reviews/    Independent reviewer reports per task
+evidence/   Generated run evidence (gitignored outputs, not claims)
+```
+
+## Working method (OpenCode)
+
+1. Builder implements the next unblocked task from `TASKS.md`, runs the
+   gates, records exact commands/results in `PROGRESS.md`, and sets the
+   task to `REVIEW_REQUIRED`.
+2. `/aql-review` invokes the read-only reviewer agent, which audits the
+   contract, code, tests and evidence independently.
+3. Builder persists the report in `reviews/<task-id>.md`, fixes blocking
+   findings, and only then marks the task `DONE`.
+4. Every commit that is pushed also updates this README's status.
+
+Commands: `/aql-resume` (recover state), `/aql-next` (next task),
+`/aql-review` (independent audit), `/aql-eval` (run gates, report honestly).
+
+## Quality rules
+
+- The contract is never weakened to make a failing test pass.
+- Tests assert response bodies, state changes and negatives — not only
+  HTTP status codes.
+- No invented coverage, CI results or findings: a gate is PASS only when a
+  command was actually run and its output recorded. Remote CI is
+  **NOT VERIFIED** until a real GitHub Actions run is observed.
+- Synthetic credentials only; local services only; no third-party targets.

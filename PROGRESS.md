@@ -1,11 +1,11 @@
 # Progress Log
 
-Current phase: 1 — contract
-Current task: AQL-200 (TODO) — local Inventory SUT and unit tests (G2)
-Last verified checkpoint: 2026-10-31T09:48Z — AQL-100 DONE: independent reviewer APPROVED (round 5, no open findings); contract:validate 21/21, contract:selftest 56/56, 63 instances, typecheck 0, doctor 11/11, harness:selftest 16/16, whole-file JSON.parse OK
+Current phase: 2 — SUT complete; next is phase 3 (QA suite)
+Current task: AQL-300 (TODO) — 22+ Playwright tests and traceability (G3)
+Last verified checkpoint: 2026-10-31T11:25Z — AQL-200 DONE: independent reviewer APPROVED (round 2, after round-1 CHANGES_REQUESTED fixes R1–R6 and non-blocking R2-1/R2-2 corrections); test:unit 29/29 twice, typecheck 0, contract:validate 21/21, contract:selftest 56/56, doctor 11/11, harness:selftest 16/16, server start/stop smoke PASS
 
 ## Important distinction
-The OpenCode role configuration and documentation scaffold were prepared externally. As of AQL-000, `harness/doctor.ts` has actually been executed locally and its output recorded below. **No SUT, API server, Playwright tests, mutation harness or remote GitHub Actions have been executed yet**, and no gate beyond the local portion of G0 has been claimed.
+The OpenCode role configuration and documentation scaffold were prepared externally. As of AQL-000, `harness/doctor.ts` has actually been executed locally and its output recorded below. **No Playwright tests, mutation harness or remote GitHub Actions have been executed yet.** The local Inventory SUT and its unit tests were executed for AQL-200 (journal below); no gate beyond G2's local portion is claimed for it.
 
 ## Execution journal
 | Time (UTC) | Task | Command | Exit code | Result | Evidence |
@@ -70,6 +70,16 @@ The OpenCode role configuration and documentation scaffold were prepared externa
 | 2026-10-31T09:47Z | AQL-100 (evidence fix) | `npm run contract:validate`; `npm run contract:selftest`; `npm run typecheck`; `npm run harness:doctor`; `npm run harness:selftest` (separated streams) | 0,0,0,0,0 | PASS — 21/21, 56/56, 0 diagnostics, 11/11, 16/16; no code change from r4 | evidence dir r5, `*.log` + `*.stderr.log` + `exit-codes.txt` |
 | 2026-10-31T09:48Z | AQL-100 | Independent verification round 5 (same reviewer session `ses_e6ebf0dfcffdnQiMXMTgC6G4p0`) | APPROVED | PASS — whole-file JSON.parse OK (21/0/true/21), stderr has exactly 6 AJV warnings, 21/56/0/11/16 reruns match; no open blocking findings; G1 PASS locally | `reviews/AQL-100.md` (round-5 verbatim) |
 | 2026-10-31T09:48Z | AQL-100 | Mark DONE (gates passed + APPROVED + evidence recorded) | — | DONE — TASKS.md AQL-100 REVIEW_REQUIRED → DONE; next unblocked task AQL-200 TODO | `TASKS.md`, `reviews/AQL-100.md` |
+| 2026-10-31T10:54Z | AQL-200 (resume) | `npm install --no-audit --no-fund` | 0 | PASS — `node_modules/` had been deleted (7 UNMET DEPENDENCY); 22 packages restored; no tracked file changed | terminal output; `npm ls --depth=0` clean after install |
+| 2026-10-31T10:58Z | AQL-200 | `npm run test:unit` | 0 | PASS — 22/22 SUT tests (health, login, auth negatives, CRUD, pagination, isolation, validation boundaries, problem format, reset) | terminal output |
+| 2026-10-31T10:58Z | AQL-200 | `PORT=3107 node sut/src/server.ts` + `curl /health`, login, create, list; `kill -TERM` | 0 | PASS — health 200 `{"status":"ok","version":"1.0.0"}`, create/list round-trip, SIGTERM stops server (subsequent curl exit 7 refused) | `/private/var/.../T/opencode/sut-smoke.log` |
+| 2026-10-31T10:59Z | AQL-200 | `npm run test:unit` ×2; `typecheck`; `contract:validate`; `contract:selftest`; `harness:doctor`; `harness:selftest` | 0,0,0,0,0,0,0 | PASS — unit 22/22 twice, 0 diagnostics, 21/21, 56/56, 11/11, 16/16 | `evidence/generated/aql-200-sut-20261031T1059Z/` (`*.log`, `exit-codes.txt`, `environment.txt`) |
+| 2026-10-31T11:10Z | AQL-200 | Independent review round 1 (reviewer subagent `ses_e6e61ef7affd5sQUlo4cVS1JiF`) | CHANGES_REQUESTED | FAIL — all six Builder commands rerun PASS by reviewer, plus independent curl probes; 4 MEDIUM contract defects reproduced (Unicode length, price precision, offset overflow, empty FieldError) + 2 LOW (test strength, stale docs) | `reviews/AQL-200.md` (round-1 verbatim) |
+| 2026-10-31T11:15Z | AQL-200 (review fix) | `npm run test:unit` ×2; `typecheck`; `contract:validate`; `contract:selftest`; `harness:doctor`; `harness:selftest` | 0,0,0,0,0,0,0 | PASS — unit 29/29 twice (7 new regression/strengthened cases for R1–R5), other gates unchanged | `evidence/generated/aql-200-sut-r2-20261031T1115Z/` |
+| 2026-10-31T11:16Z | AQL-200 (review fix) | `PORT=3108 node sut/src/server.ts` + `curl /health`; `kill -TERM` | 0 | PASS — health 200, SIGTERM stop verified (curl exit 7 after) | `/private/var/.../T/opencode/sut-smoke2.log` |
+| 2026-10-31T11:20Z | AQL-200 | Independent re-review round 2 (same reviewer session `ses_e6e61ef7affd5sQUlo4cVS1JiF`) | APPROVED | PASS — R1–R4 verified resolved by independent HTTP probes (port 51399), all six commands rerun PASS (29/21/56/11/16), SIGTERM stop verified; 2 LOW non-blocking observations (coverage breadth, stale 22-counts) | `reviews/AQL-200.md` (round-2 verbatim) |
+| 2026-10-31T11:25Z | AQL-200 (post-approval corrections) | `npm run test:unit` ×2; `typecheck`; `contract:validate`; `contract:selftest`; `harness:doctor`; `harness:selftest` | 0,0,0,0,0,0,0 | PASS — unit 29/29 twice after R2-1 coverage extensions (same test count, broader assertions) and R2-2 count corrections; contract diff empty | `evidence/generated/aql-200-sut-r3-20261031T1125Z/` |
+| 2026-10-31T11:25Z | AQL-200 | Mark DONE (gates passed + APPROVED + evidence recorded) | — | DONE — TASKS.md AQL-200 REVIEW_REQUIRED → DONE; next unblocked task AQL-300 TODO | `TASKS.md`, `reviews/AQL-200.md` |
 
 ### G0 status (local portion)
 | Requirement | Status | Basis |
@@ -135,7 +145,7 @@ The exit code 1 in rows 5–9 is npm reporting a missing script, not a failing t
 
 Remote CI: **NOT VERIFIED** — no workflow file exists and no GitHub Actions run was observed. No CI success is claimed.
 
-> The G1–G6 rows above are the audit state **as of 2026-10-31T08:52Z**. G1 has since been implemented; see "Gate G1 — contract (AQL-100)" below. G2–G6 remain BLOCKED / NOT VERIFIED.
+> The G1–G6 rows above are the audit state **as of 2026-10-31T08:52Z** (historical, superseded): G1 has since been implemented (see "Gate G1" below) and G2 has since been implemented (see "Gate G2" below). At that audit time, G2–G6 were BLOCKED / NOT VERIFIED.
 
 ### What this audit does not prove
 - That the SUT or test suite works — neither exists at `9015b72`.
@@ -239,8 +249,46 @@ Status: local checks PASS; independent review round 5 **APPROVED** — no open b
 - Not committed or pushed: awaiting user approval per `AGENTS.md`.
 - Known limitations: same as post round-3 handoff (document-only validator; `multipleOf` intent behavioral in AQL-300; `x-*` extensions enforced by this repo; field-error vocabulary not enum; explicit operation constants; 63 instances cover tested cases; `uuid`/`date-time` formats ignored without `ajv-formats` — warnings now isolated in `*.stderr.log`).
 
+## Gate G2 — SUT (AQL-200, DONE)
+
+Status: local checks PASS; independent review round 1 CHANGES_REQUESTED (R1–R6) → fixes → round 2 **APPROVED** (2 LOW non-blocking, corrected before publication). AQL-200 is **DONE**.
+
+| G2 requirement | Status | Basis |
+| --- | --- | --- |
+| SUT implements the contract (health, login, item CRUD) | PASS | `sut/src/app.ts`: 7 operations from `contract/openapi.yaml`; problem+json errors with the 8 registered codes; bearer auth with `WWW-Authenticate: Bearer`; foreign/nonexistent ids share 404 `item_not_found` (D009) |
+| SUT starts/stops reliably | PASS | Server smoke on ports 3107 and 3108: health 200, login/create/list round-trip, SIGTERM stop verified; the unit suite itself starts on an ephemeral port and closes cleanly twice in a row |
+| Unit tests pass | PASS | `npm run test:unit` 29/29, two consecutive runs, exit 0 (`evidence/generated/aql-200-sut-r2-20261031T1115Z/test-unit*.log`); includes Unicode, price-precision, offset-overflow, empty-property, all-operations-auth, expiry and shape regressions |
+| Contract not weakened | PASS | `contract:validate` 21/21, `contract:selftest` 56/56 unchanged; typecheck 0; doctor 11/11; harness:selftest 16/16 |
+| Independent review | APPROVED (round 2) | Round 1 (4 MEDIUM + 2 LOW) → fixes → round 2 APPROVED with 2 LOW non-blocking observations, both corrected and re-verified (29/29) before publication; full text in `reviews/AQL-200.md` |
+
+**G2: PASS (local checks + independent APPROVED).** Remote CI remains NOT VERIFIED.
+
+### Handoff — AQL-200 (REVIEW_REQUIRED, historical — superseded by the DONE handoff at the end of this file)
+
+- Added: `sut/src/app.ts` (dependency-free Node `http` SUT: routing, opaque-token auth with enforced 3600s expiry, contract validation, in-memory per-instance store, `reset()`), `sut/src/server.ts` (`PORT` entrypoint, graceful SIGINT/SIGTERM), `sut/app.test.ts` (29 tests titled by requirement ID; originally 22, +7 from review round-1 regressions), `sut/README.md` (run instructions, synthetic users, reset semantics).
+- Modified: `package.json` (+`sut:start`, +`test:unit`; no new dependencies), `DECISIONS.md` (D012 synthetic credentials/in-memory design, D013 README-per-pushed-commit rule), `README.md` (GitHub status rewritten for AQL-200 per D013), `TASKS.md` (AQL-200 TODO → IN_PROGRESS → REVIEW_REQUIRED), `PROGRESS.md`.
+- Verification: `npm run test:unit` 29/29 exit 0 (twice, post round-1 fixes); `npm run typecheck` 0; `npm run contract:validate` 21/21; `npm run contract:selftest` 56/56; `npm run harness:doctor` 11/11; `npm run harness:selftest` 16/16; server smokes on ports 3107/3108 (health/login/create/list + SIGTERM stop). The 22/22 counts in the 10:58–10:59Z journal rows are historical (pre-review suite).
+- Evidence: `evidence/generated/aql-200-sut-20261031T1059Z/` (gitignored) — `test-unit.log`, `test-unit-run2.log`, `typecheck.log`, `contract-validate.log` (+stderr), `contract-selftest.log` (+stderr), `doctor.log`, `harness-selftest.log`, `exit-codes.txt` (all 0), `environment.txt`.
+- Diff/commit reference: uncommitted increment on top of `7f99dd2` (plugin-removal cleanup already committed locally, not yet pushed); inspect with `git status --short`, `git diff --stat`. No commit/push performed for AQL-200 yet — user authorized commit+push only after reviewer approval.
+- Known limitations:
+  - Tokens, items and users live in memory; a restart wipes everything. This is the intended fixture-isolation design (D012), not persistence.
+  - Field-error codes for fractional `quantity` and non-integer `limit`/`offset` use `wrong_type`; the contract describes the vocabulary without an enum (see AQL-100 handoff), so AQL-300 will pin these observed codes behaviorally.
+  - PATCH checks ownership (404) before body media-type/validation so foreign ids stay indistinguishable; the contract does not order 404 against 400/415 for that combination.
+  - `internal_error` (500) exists only as a leak-free catch-all for unexpected faults; it is not a contract code and no test triggers it.
+  - Unit tests run over real HTTP on an ephemeral port but are SUT tests; the 22+ Playwright QA suite with traceability is AQL-300.
+- Explicit request: independent `@reviewer` audit of AQL-200 (G2) — verify the SUT against `contract/openapi.yaml` requirement IDs, run the unit suite and start/stop independently, and return APPROVED / CHANGES_REQUESTED / BLOCKED with gate-by-gate PASS/FAIL/BLOCKED/NOT VERIFIED. Do not mark DONE here.
+
+## Handoff — AQL-200 (DONE)
+
+- Scope: minimal dependency-free Inventory SUT implementing the 7 contract operations, plus 29 requirement-titled unit/API tests. No Playwright suite, mutation harness or CI claimed.
+- Files: `sut/src/app.ts`, `sut/src/server.ts`, `sut/app.test.ts`, `sut/README.md`; modified `package.json` (+`sut:start`, +`test:unit`, no new dependencies), `DECISIONS.md` (D012, D013), `README.md` (rewritten GitHub status per D013), `TASKS.md`, `PROGRESS.md`, `reviews/AQL-200.md`.
+- Verification (final, post-approval corrections): `npm run test:unit` 29/29 exit 0 twice; `typecheck` 0; `contract:validate` 21/21; `contract:selftest` 56/56; `harness:doctor` 11/11; `harness:selftest` 16/16; server start/stop smoke PASS. Evidence: `evidence/generated/aql-200-sut-r3-20261031T1125Z/` (plus retained r1/r2 dirs).
+- Review history: round 1 CHANGES_REQUESTED (4 MEDIUM: Unicode length, price precision, offset overflow, empty FieldError; 2 LOW) → all fixed with regression tests → round 2 APPROVED (2 LOW non-blocking: coverage breadth, stale counts) → both corrected before publication. Full verbatim in `reviews/AQL-200.md`.
+- Known limitations: in-memory state only (intended fixture design, D012); fractional-quantity/non-integer-query field code is `wrong_type` from the contract's non-enumerated vocabulary (AQL-300 will pin observed codes); PATCH returns 404 before body validation for foreign ids (contract does not order combined failures); `internal_error` 500 catch-all is non-contract and untriggered; token expiry is covered by fake-clock test, not real-time waiting.
+- Explicit request: independent `@reviewer` audit already returned APPROVED for AQL-200 (session `ses_e6e61ef7affd5sQUlo4cVS1JiF`); no further review pending for this task.
+
 ## Next action
-AQL-100 is DONE. Start AQL-200 — implement the local Inventory SUT against this contract with unit tests (G2). No commit/push without user approval.
+AQL-200 is DONE. Start AQL-300 — implement the 22+ Playwright API tests and traceability matrix against this SUT (G3). Commit + push of the AQL-200 increment was authorized by the user after APPROVED (2026-10-31); see git log for the resulting commit.
 
 ## Handoff — AQL-100 (DONE)
 
