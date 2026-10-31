@@ -1,6 +1,13 @@
 # API Quality Lab — OpenCode Starter Scaffold
 
-**Setup only.** This archive initializes OpenCode custom roles, project rules, commands, and persistent harness documents. It does NOT yet contain a functioning Inventory API, test suite, package.json, or working evaluator.
+**Setup only.** This archive initializes OpenCode custom roles, project rules, commands, and persistent harness documents. It now also contains the Phase 0 toolchain bootstrap (`package.json`, `tsconfig.json`, `harness/doctor.ts`), but NOT yet a functioning Inventory API, test suite, or working evaluator.
+
+## Phase 0 check
+```sh
+npm install
+npm run harness:doctor   # 11 preflight checks, exits non-zero on failure
+npm run typecheck
+```
 
 ## First launch
 1. Install stable OpenCode, Node.js 24 and Git.
