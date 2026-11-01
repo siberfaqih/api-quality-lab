@@ -40,9 +40,14 @@ the runtime, not an additional contract maximum.
 All state (items and tokens) lives in memory inside one server
 instance. Restarting the server — or calling the exported `reset()`
 from `createInventoryServer()` in tests — returns to an empty
-fixture. That restart is the isolation boundary the QA suite will use
-(AQL-300, not yet implemented); there is deliberately no reset
-endpoint in the contract.
+fixture. The Playwright suite (AQL-300) uses a fresh in-process server
+instance per test as its isolation boundary; there is deliberately no
+reset endpoint in the contract.
+
+`createInventoryServer({ now })` injects the clock used for token
+expiry and item `createdAt`/`updatedAt`; the default is `Date.now`.
+AQL-300 uses this hook to create a deterministic ordering tie rather
+than relying on wall-clock timing.
 
 ## Files
 

@@ -10,14 +10,22 @@
   "scripts": {
     "harness:doctor": "node harness/doctor.ts",
     "harness:selftest": "node harness/doctor.selftest.ts",
+    "harness:eval": "node harness/eval.ts",
+    "harness:eval:selftest": "node harness/eval.selftest.ts",
     "contract:validate": "node harness/contract-check.ts",
     "contract:selftest": "node harness/contract.selftest.ts",
     "sut:start": "node sut/src/server.ts",
     "test:unit": "node --test sut/app.test.ts",
+    "test:api": "playwright test --config qa/playwright.config.ts",
+    "qa:traceability": "node qa/traceability-check.ts",
+    "qa:traceability:selftest": "node qa/traceability-check.ts --self-test",
+    "reports:verify": "node harness/report-check.ts",
+    "reports:selftest": "node harness/report-check.ts --self-test",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "^13.1.0",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.6",
     "@types/semver": "^7.8.0",
     "ajv": "^8.20.0",

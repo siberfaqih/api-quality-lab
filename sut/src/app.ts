@@ -213,10 +213,9 @@ function validateLoginBody(body: unknown): FieldError[] {
   return errors;
 }
 
-function nextTimestamp(afterIso: string): string {
+function nextTimestamp(afterIso: string, currentMs: number): string {
   const afterMs = Date.parse(afterIso);
-  const nowMs = Date.now();
-  return new Date(nowMs > afterMs ? nowMs : afterMs + 1).toISOString();
+  return new Date(currentMs > afterMs ? currentMs : afterMs + 1).toISOString();
 }
 
 type BodyResult =
@@ -347,7 +346,7 @@ export function createInventoryServer(options: InventoryServerOptions = {}): Inv
       return;
     }
     const record = body.value as Record<string, unknown>;
-    const now = new Date().toISOString();
+    const createdAt = new Date(now()).toISOString();
     const item: Item = {
       id: randomUUID(),
       ownerId: user.id,
@@ -356,8 +355,8 @@ export function createInventoryServer(options: InventoryServerOptions = {}): Inv
       category: (record["category"] as string | undefined) ?? "other",
       price: record["price"] as number,
       quantity: record["quantity"] as number,
-      createdAt: now,
-      updatedAt: now,
+      createdAt,
+      updatedAt: createdAt,
     };
     items.set(item.id, item);
     res.setHeader("Location", `/items/${item.id}`);
@@ -461,7 +460,7 @@ export function createInventoryServer(options: InventoryServerOptions = {}): Inv
     if (record["category"] !== undefined) item.category = record["category"] as string;
     if (record["price"] !== undefined) item.price = record["price"] as number;
     if (record["quantity"] !== undefined) item.quantity = record["quantity"] as number;
-    item.updatedAt = nextTimestamp(item.updatedAt);
+    item.updatedAt = nextTimestamp(item.updatedAt, now());
     sendJson(res, 200, item);
   }
 

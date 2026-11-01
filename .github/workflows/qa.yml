@@ -1,0 +1,147 @@
+name: QA
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-${{ github.workflow }}-${{ github.ref }}
+  # Do not cancel a run while harness:eval may be mid-mutation. Each job also
+  # verifies and, if necessary, restores sut/src/app.ts before it ends.
+  cancel-in-progress: false
+
+env:
+  CI: "true"
+  PLAYWRIGHT_HTML_OPEN: never
+
+jobs:
+  quality:
+    name: Quality gates and mutation evaluation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Environment versions
+        run: |
+          node --version
+          npm --version
+          npx playwright --version
+
+      - name: Preflight checks
+        run: npm run harness:doctor
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Contract validation
+        run: npm run contract:validate
+
+      - name: Contract validator self-test
+        run: npm run contract:selftest
+
+      - name: SUT unit tests
+        run: npm run test:unit
+
+      - name: QA traceability
+        run: npm run qa:traceability
+
+      - name: QA traceability self-test
+        run: npm run qa:traceability:selftest
+
+      - name: Harness self-test
+        run: npm run harness:selftest
+
+      - name: Mutation evaluator self-test
+        run: npm run harness:eval:selftest
+
+      - name: Report checker self-test
+        run: npm run reports:selftest
+
+      - name: API baseline with HTML and JUnit reports
+        env:
+          PLAYWRIGHT_HTML_REPORT: ${{ github.workspace }}/reports/api-baseline/html
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ github.workspace }}/reports/api-baseline/junit.xml
+        run: npm run test:api -- --reporter=list,html,junit
+
+      - name: Record SUT hash before mutation evaluation
+        run: sha256sum sut/src/app.ts | tee "$RUNNER_TEMP/sut-before.sha256"
+
+      - name: Mutation evaluation with separated reports
+        run: >-
+          npm run harness:eval --
+          --evidence evidence/generated/ci-harness-eval
+          --reports reports/harness-eval
+
+      - name: Verify generated reports
+        run: npm run reports:verify -- --reports reports
+
+      - name: Verify SUT restored after mutation evaluation
+        if: always()
+        run: |
+          if [ ! -f "$RUNNER_TEMP/sut-before.sha256" ]; then
+            echo "No pre-evaluation hash recorded; mutation evaluation did not start."
+            exit 0
+          fi
+          before=$(cut -d' ' -f1 "$RUNNER_TEMP/sut-before.sha256")
+          after=$(sha256sum sut/src/app.ts | cut -d' ' -f1)
+          echo "before $before"
+          echo "after  $after"
+          if [ "$before" != "$after" ]; then
+            echo "::error::harness:eval left sut/src/app.ts modified"
+            git checkout -- sut/src/app.ts
+            exit 1
+          fi
+
+      - name: Upload API baseline reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-baseline-reports
+          path: reports/api-baseline
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload harness baseline reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-baseline-reports
+          path: |
+            reports/harness-eval/baseline-pre
+            reports/harness-eval/baseline-post
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload intentional mutation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-mutation-reports
+          path: reports/harness-eval/mutations
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload harness evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-eval-evidence
+          path: evidence/generated/ci-harness-eval
+          if-no-files-found: warn
+          retention-days: 14
