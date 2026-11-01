@@ -75,7 +75,8 @@ calculate or claim line/branch coverage.
 - `npm run reports:verify -- --reports <dir>` checks the generated baseline and
   intentional-mutation reports; `npm run reports:selftest` covers its negative
   controls.
-- Remote CI has not run; G5's remote PASS remains NOT VERIFIED.
+- Remote CI passed on the observed run 41271870930 (G5 PASS local + remote;
+  see `reviews/AQL-500.md`).
 - The OpenAPI document is validated separately by `npm run contract:validate`.
   These tests exercise behavior and do not replace that document check.
 - Field-level error codes are pinned to the SUT's observed vocabulary where

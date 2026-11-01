@@ -1,9 +1,10 @@
 # Test Plan — Inventory API
 
 Status: the G3 Playwright suite is implemented and round-2 independently
-approved (G3 PASS locally). The G5 CI/report pipeline is implemented and locally
-validated but remains `REVIEW_REQUIRED`; **remote CI is NOT VERIFIED** because
-no GitHub Actions run has been performed. The normative behavior is
+approved (G3 PASS locally). The G5 CI/report pipeline is implemented, locally
+validated and remotely verified: AQL-500 is DONE after the successful
+GitHub Actions run 41271870930 at the exact committed head (see
+`reviews/AQL-500.md`). The normative behavior is
 `contract/openapi.yaml`; this plan describes how the suite verifies it and how
 CI reports it.
 
@@ -99,10 +100,12 @@ negative controls. The mutation report expectations are pinned to
 (2 tests, 1 failure) and `cross-user-authorization-bypass` (2 tests,
 1 failure).
 
-**Remote CI is NOT VERIFIED.** Local execution of every workflow command,
-`actionlint` and report verification are recorded in
-`evidence/generated/aql-500-ci-20261101T0345Z/`, but no GitHub Actions run
-exists yet.
+**Remote CI is VERIFIED.** Beyond the local evidence above, GitHub Actions run
+https://github.com/siberfaqih/api-quality-lab/actions/runs/41271870930
+(SUCCESS, attempt 1, push to `main`, exact head `9dad20e`) executed every
+workflow command with the same results, uploaded all four artifacts, and was
+independently verified by the same reviewer (full G5 APPROVED PASS; see
+`reviews/AQL-500.md`).
 
 ## Known limitations
 
@@ -111,9 +114,11 @@ exists yet.
 - The deterministic ordering test injects the SUT clock; default SUT behavior
   remains wall-clock `Date.now`.
 - The suite does not compute coverage percentages.
-- The G5 workflow and reports are validated locally only; no remote GitHub
-  Actions run has been observed, so G5 remote PASS remains NOT VERIFIED.
-- The report verifier checks structure, counts, intended failing ids and HTML
-  presence; it is not a full XML-schema validator.
+- The G5 workflow and reports are validated locally and on the observed remote
+  run 41271870930 (G5 PASS local + remote; see `reviews/AQL-500.md`).
+- The report verifier checks structure, counts, exact QA testcase inventories,
+  intended failing subsets and Playwright-specific report markers; it is not a
+  full XML-schema validator, and its checks are consistency/authenticity sanity
+  checks rather than cryptographic provenance.
 - Error `FieldError.code` values are pinned to observed SUT behavior where
   the contract defines the vocabulary but not a field-to-code map.

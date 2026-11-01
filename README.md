@@ -17,7 +17,7 @@ is the product; the system under test (SUT) is intentionally simple.
 | 2 | Local Inventory SUT + SUT unit tests | G2 | ✅ DONE — unit tests 29/29, start/stop smoke verified, reviewer APPROVED (round 2, after round-1 fixes) |
 | 3 | 32 Playwright API tests + traceability | G3 | ✅ DONE — round-2 independent review APPROVED; 32/32 twice, shuffled 4-worker pass, discovery traceability 28/28 + 9/9 self-test; G3 PASS locally (remote CI not verified) |
 | 4 | Mutation evaluation harness (3 mutants) | G4 | ✅ DONE — round-2 independent review APPROVED; exact expected/received semantics, HTTP-500/wrong-value rejection, 37/37 self-tests, 3/3 mutations, SUT hash restored, 32/32 baseline twice; G4 PASS locally (remote CI not verified) |
-| 5 | GitHub Actions CI + HTML/JUnit reports | G5 | 🟦 BLOCKED — local APPROVED (API 32/32, 3/3 mutations, report verifier 14/14, `actionlint` 0; round-2 review, no open local blockers); **remote CI NOT VERIFIED** — unblocks on authorized commit/push + one successful observed Actions run |
+| 5 | GitHub Actions CI + HTML/JUnit reports | G5 | ✅ DONE — local APPROVED + remote verified (run 41271870930 SUCCESS, exact head `9dad20e`: API 32/32, 3/3 mutations, report verifier 14/14, `actionlint` 0; round-2 + remote review, no open blockers) |
 | 6 | Simulated defect report + case study | G6 | ⬜ TODO |
 
 Task board: [`TASKS.md`](TASKS.md) · Execution log with exact commands and
@@ -115,9 +115,15 @@ Each directory contains `junit.xml` and `html/index.html`. The workflow uploads
 `harness-mutation-reports` and `harness-eval-evidence`. `reports/` is generated
 and gitignored.
 
-**Remote status: NOT VERIFIED.** The workflow and report pipeline pass locally,
-but no commit, push or dispatch has been performed, so GitHub Actions has not
-run. A G5 remote PASS requires an actual successful run and is not claimed here.
+**Remote status: VERIFIED.** The workflow and report pipeline pass locally and
+in CI: run https://github.com/siberfaqih/api-quality-lab/actions/runs/41271870930
+(SUCCESS, attempt 1, push to `main`, exact head `9dad20e`, every job step
+SUCCESS) executed every gate — doctor 11/11, contract 21/21 + selftest 56/56,
+unit 29/29, traceability 32/28/32 + selftest 9/9, harness self-tests 16/16 +
+37/37 + 14/14, API baseline 32/32 with HTML/JUnit, `harness:eval` 3/3 with
+baselines 32/32 twice and the SUT hash exact before/after, `reports:verify`
+PASS — and uploaded all four artifacts. The same independent reviewer verified
+the run and returned full G5 APPROVED PASS (see `reviews/AQL-500.md`).
 
 ## Project layout
 

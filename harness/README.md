@@ -112,4 +112,5 @@ baseline checks, and restore-on-success/restore-on-throw in a temp directory
   and after, not during each mutation.
 - The baseline count is pinned to the G3 suite (32 tests); a deliberate suite
   change requires updating `BASELINE_TEST_COUNT`.
-- No coverage percentage is claimed, and remote CI remains G5 / NOT VERIFIED.
+- No coverage percentage is claimed. Remote CI passed on observed run
+  41271870930 at the exact committed head (see `reviews/AQL-500.md`).

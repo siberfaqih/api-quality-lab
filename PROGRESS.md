@@ -1,11 +1,11 @@
 # Progress Log
 
-Current phase: 5 implemented locally — AQL-500 BLOCKED (local APPROVED, G5 local PASS; remote GitHub Actions run NOT VERIFIED, awaiting authorized commit/push + observed run)
-Current task: AQL-500 (G5) BLOCKED on publication/remote CI; AQL-600 has not started
-Last verified checkpoint: 2026-11-01T04:01Z — AQL-500 round-1 fix evidence `evidence/generated/aql-500-ci-20261101T0400Z/` (17 commands, all exit 0; earlier `aql-500-ci-20261101T0345Z`/`0348Z` dirs retained unedited): typecheck 0; unit 29/29; contract 21/21 + selftest 56/56; traceability 32 tests/28 requirements/32 ids + selftest 9/9; harness selftest 16/16; eval selftest 37/37; reports selftest 14/14; API baseline 32/32 with JUnit 32/0 and Playwright HTML; `harness:eval` 3/3 mutations with exact expected/received pairs, SUT `c2f33ba4…d2d7fd` before/during/after, baseline 32/32 twice; mutation JUnit 9/2, 2/1, 2/1 with the intended QA ids and exact spec inventories; `reports:verify` PASS on the real tree and FAIL (24 errors) on the reviewer's synthetic probe; workflow structural check PASS; `actionlint` 1.7.12 exit 0; contract diff empty; `npm ls` clean. No commit/push/dispatch was performed, so **remote CI is NOT VERIFIED**.
+Current phase: 5 complete — AQL-500 DONE (G5 local + remote PASS, verified Actions run 41271870930)
+Current task: AQL-600 TODO (not started); next unblocked implementation task
+Last verified checkpoint: 2026-11-01T04:01Z — AQL-500 round-1 fix evidence `evidence/generated/aql-500-ci-20261101T0400Z/` (17 commands, all exit 0; earlier `aql-500-ci-20261101T0345Z`/`0348Z` dirs retained unedited): typecheck 0; unit 29/29; contract 21/21 + selftest 56/56; traceability 32 tests/28 requirements/32 ids + selftest 9/9; harness selftest 16/16; eval selftest 37/37; reports selftest 14/14; API baseline 32/32 with JUnit 32/0 and Playwright HTML; `harness:eval` 3/3 mutations with exact expected/received pairs, SUT `c2f33ba4…d2d7fd` before/during/after, baseline 32/32 twice; mutation JUnit 9/2, 2/1, 2/1 with the intended QA ids and exact spec inventories; `reports:verify` PASS on the real tree and FAIL (24 errors) on the reviewer's synthetic probe; workflow structural check PASS; `actionlint` 1.7.12 exit 0; contract diff empty; `npm ls` clean. Local work then committed and pushed as `9dad20e` (user-authorized); the same reviewer verified run 41271870930 (SUCCESS, exact head) and returned full G5 APPROVED PASS, so **G5 PASS local + remote and AQL-500 DONE** (see Gate G5).
 
 ## Important distinction
-The OpenCode role configuration and documentation scaffold were prepared externally. As of AQL-000, `harness/doctor.ts` has actually been executed locally and its output recorded below. The local Inventory SUT and its unit tests were executed for AQL-200, and the Playwright API suite was executed for AQL-300 (journal below). The mutation harness was executed for AQL-400: all three mutations were detected at their exact expected/received semantics and the SUT was restored, but **remote GitHub Actions has still not been executed.** AQL-300's round-1 review returned CHANGES_REQUESTED; the fixes are recorded below, and round 2 returned APPROVED with G3 PASS locally, so AQL-300 is DONE. AQL-400 round 1 returned CHANGES_REQUESTED for broad assertion semantics; the fix is recorded below, and round 2 returned APPROVED with G4 PASS locally, so AQL-400 is DONE. AQL-500 (CI + HTML/JUnit reports) round 1 returned CHANGES_REQUESTED for the verifier-weakness defect; the fix is recorded below, and round 2 (same reviewer session) returned APPROVED locally with G5 local PASS and no open local blockers, so AQL-500 is **BLOCKED** pending an authorized commit/push and a successful observed GitHub Actions run — never DONE before that. No remote run exists, so the remote half of G5 is **NOT VERIFIED**.
+The OpenCode role configuration and documentation scaffold were prepared externally. As of AQL-000, `harness/doctor.ts` has actually been executed locally and its output recorded below. The local Inventory SUT and its unit tests were executed for AQL-200, and the Playwright API suite was executed for AQL-300 (journal below). The mutation harness was executed for AQL-400: all three mutations were detected at their exact expected/received semantics and the SUT was restored, but **remote GitHub Actions has still not been executed.** AQL-300's round-1 review returned CHANGES_REQUESTED; the fixes are recorded below, and round 2 returned APPROVED with G3 PASS locally, so AQL-300 is DONE. AQL-400 round 1 returned CHANGES_REQUESTED for broad assertion semantics; the fix is recorded below, and round 2 returned APPROVED with G4 PASS locally, so AQL-400 is DONE. AQL-500 (CI + HTML/JUnit reports) round 1 returned CHANGES_REQUESTED for the verifier-weakness defect; the fix is recorded below, and round 2 (same reviewer session) returned APPROVED locally with G5 local PASS and no open local blockers. After the user-authorized commit/push of `9dad20e`, the same reviewer independently verified the successful run https://github.com/siberfaqih/api-quality-lab/actions/runs/41271870930 and returned full G5 APPROVED PASS, so AQL-500 is **DONE**. (Earlier "no remote run / NOT VERIFIED" statements in this log are historical: they describe the state before the `9dad20e` push and are retained as such.)
 
 ## Execution journal
 | Time (UTC) | Task | Command | Exit code | Result | Evidence |
@@ -115,6 +115,7 @@ The OpenCode role configuration and documentation scaffold were prepared externa
 | 2026-11-01T03:53Z | AQL-500 (fallback re-validation, no code change) | TASKS.md REVIEW_REQUIRED → IN_PROGRESS → REVIEW_REQUIRED; 17-command evidence set: `harness:doctor`; `typecheck`; `contract:validate`; `contract:selftest`; `test:unit`; `qa:traceability`; `qa:traceability:selftest`; `harness:selftest`; `harness:eval:selftest`; `reports:selftest`; API baseline with `--reporter=list,html,junit` to `<dir>/reports/api-baseline`; `harness:eval -- --evidence <dir>/eval --reports <dir>/reports/harness-eval`; `reports:verify -- --reports <dir>/reports`; workflow structural check; `git diff --exit-code -- contract/openapi.yaml`; `npm ls --depth=0`; `actionlint` 1.7.12 (prior session binary, no repo/global change) | 0 across all 17 commands | PASS (local) — doctor 11/11; unit 29/29; contract 21/21 + 56/56; traceability 32/28/32 + selftest 9/9; harness selftest 16/16; eval selftest 37/37; reports selftest 8/8; API baseline 32/32 with JUnit 32/0 and HTML; harness:eval 3/3 mutations with exact pairs, SUT `c2f33ba4…d2d7fd` before/during/after, baseline 32/32 twice; mutation JUnit 9/2, 2/1, 2/1 with intended QA ids; `reports:verify` PASS; contract diff empty; `npm ls` clean. Prior user deletions (`.opencode/*`, `opencode.json`) untouched; `contract/openapi.yaml` unchanged. **Remote CI NOT VERIFIED — no commit/push/dispatch.** | `evidence/generated/aql-500-ci-20261101T0348Z/` (`*.log`, `*.stderr.log`, `exit-codes.txt`, `environment.txt`, `reports/api-baseline/`, `reports/harness-eval/`, `eval/`, `junit-summary.txt`, `report-files.txt`, `sut-hash-before.txt`, `sut-hash-final.txt`, `git-status.txt`) |
 | 2026-11-01T04:01Z | AQL-500 (round-1 fix: strengthened report verifier) | TASKS.md REVIEW_REQUIRED → IN_PROGRESS → REVIEW_REQUIRED; `harness/report-check.ts` rewritten (exact QA inventories, Playwright HTML markers, 14-case self-test); docs updated (`README.md`, `harness/README.md`, `docs/test-plan.md`, `DECISIONS.md` D018); 17-command evidence set into `evidence/generated/aql-500-ci-20261101T0400Z/` (same commands as the 03:53Z run); reviewer synthetic probe rebuilt in `/tmp/synth-probe` (unrelated 32-green + generic-HTML baselines, right-count/right-failing-id but wrong-inventory mutations) | 0 across all 17 commands; probe exit 1 | PASS (local) — typecheck 0; doctor 11/11; unit 29/29; contract 21/21 + 56/56; traceability 32/28/32 + selftest 9/9; harness selftest 16/16; eval selftest 37/37; reports selftest 14/14; API baseline 32/32 with JUnit 32/0; harness:eval 3/3 with exact pairs, SUT `c2f33ba4…d2d7fd` before/during/after, baseline 32/32 twice; `reports:verify` PASS on the real tree; synthetic probe FAILs with 24 errors (missing/unexpected ids + missing Playwright markers on all six report dirs); `actionlint` 1.7.12 exit 0; contract diff empty; `npm ls` clean. Only `harness/report-check.ts` + docs changed; tests, SUT, contract and workflow untouched. **Remote CI NOT VERIFIED — no commit/push/dispatch.** | `evidence/generated/aql-500-ci-20261101T0400Z/` (same layout as 0348Z); `reviews/AQL-500.md` (round-1 record + fix disposition) |
 | 2026-11-01 | AQL-500 (round-2 re-review: APPROVED locally → BLOCKED) | Docs-only close-out, no implementation changes: persisted round-2 faithful summary in `reviews/AQL-500.md`; TASKS.md REVIEW_REQUIRED → BLOCKED; PROGRESS.md checkpoint/gate/journal updated; README.md status updated. Verified reviewer evidence `evidence/generated/aql-500-review-r2-20261101/eval/summary.json` (`ok: true`, 3/3 mutations, 32/32 pre/post, sha `c2f33ba4…d2d7fd` exact) | — (no commands run; evidence already recorded) | APPROVED locally, no open local blockers — HTML markers, exact 32 inventories, exact 9/2/2 mutation inventories + intended subsets, 14/14 self-tests, probe rejected exit 1/24 errors, fresh API 32/32, eval 3/3, reports:verify PASS (fresh + supplied), actionlint 0, unit 29/29, contract 21/21 unchanged, workflow sound. **G5 local PASS; G5 remote NOT VERIFIED.** Unblocks on explicit authorization for commit/push + one successful observed Actions run. No AQL-600 work, no commits or pushes. | `reviews/AQL-500.md`, `TASKS.md`, this log |
+| 2026-11-01 | AQL-500 (remote verification: full G5 APPROVED PASS → DONE) | Docs-only close-out, no implementation changes: persisted remote-verification summary in `reviews/AQL-500.md`; TASKS.md BLOCKED → DONE; PROGRESS.md headers/gate/journal updated; README.md status updated. Verified reviewer evidence `evidence/generated/aql-500-remote-41271870930/harness-eval-evidence/summary.json` locally (`ok: true`, 3/3 mutations with exact failing sets, 32/32 pre/post, sha `c2f33ba4…d2d7fd` exact, `errors: []`); confirmed HEAD `9dad20e` and a clean implementation tree (only pre-existing external deletions outstanding) | — (no commands run; remote run 41271870930 is the evidence) | Run https://github.com/siberfaqih/api-quality-lab/actions/runs/41271870930 SUCCESS (attempt 1, push main, exact head `9dad20e`, all steps SUCCESS; Node 24.22.1, Playwright 1.64.1); remote gates match local (11/21+56/29/32/28+9/16/37/14/32/3/verify PASS); 4 artifacts present unexpired at exact head; archive hash matches GitHub digest. **G5 PASS local + remote. AQL-500 DONE.** Next: AQL-600 TODO (not started). No Builder-side commits or pushes; no AQL-600 work. | `reviews/AQL-500.md`, `TASKS.md`, this log |
 
 ### G0 status (local portion)
 | Requirement | Status | Basis |
@@ -450,14 +451,14 @@ Status: round-1 independent review returned **CHANGES_REQUESTED** (G4 FAIL: broa
   - No coverage percentage is claimed. Remote CI and HTML/JUnit reporting remain G5 and are not part of this task.
 - Review outcome: the same reviewer (`ses_e6baf06ffffeO2nQ0BQyLCHkBS`) re-reviewed on 2026-11-01 and returned **APPROVED** with G4 PASS locally; the round-1 finding was verified resolved and no open blockers remain. AQL-400 was then marked DONE. Remote CI remains NOT VERIFIED (G5); no commit or push.
 
-## Gate G5 — CI workflow and reports (AQL-500, BLOCKED)
+## Gate G5 — CI workflow and reports (AQL-500, DONE)
 
-Status: local half **APPROVED and PASS** (round-2 independent review, no open
-local blockers); the task is **BLOCKED, not DONE**. The remote half is **NOT
-VERIFIED** because no commit, push or workflow dispatch was permitted. No
-GitHub Actions run exists, so this log does not claim a remote PASS, and
-AQL-500 must never be marked DONE before an authorized commit/push plus a
-successful observed run.
+Status: **G5 PASS — local and remote.** Round-2 independent review APPROVED
+the local half with no open blockers; after the user-authorized commit/push
+of `9dad20e`, the same reviewer independently verified the successful GitHub
+Actions run 41271870930 and returned full G5 APPROVED PASS. (The earlier
+"no remote run" statements below are historical and describe the pre-push
+state.)
 
 | G5 requirement | Status | Basis |
 | --- | --- | --- |
@@ -468,15 +469,17 @@ successful observed run.
 | Mutation evaluation is sequential and restores the SUT | PASS (local) | A single CI job with no parallel matrix step runs the API baseline and then `harness:eval`; `concurrency.cancel-in-progress` is `false` so a run is not cancelled mid-mutation. The workflow records `sha256sum sut/src/app.ts` before evaluation and compares it after, failing and restoring from git on mismatch. Locally the final hash equals the baseline `c2f33ba463f9f6f5ffe2db312bc026b14045ea7088bc31c2d3b8d762e9d2d7fd`. |
 | Workflow syntax and expression validation | PASS (local) | `actionlint` 1.7.12 (built outside the repository; no global config added) exits 0 on `.github/workflows/qa.yml`. |
 | Existing gates remain green | PASS (local) | Fresh evidence `aql-500-ci-20261101T0400Z`: typecheck 0; unit 29/29; contract 21/21 + selftest 56/56; traceability 32 tests/28 requirements/32 ids + selftest 9/9; doctor 11/11; harness selftest 16/16; eval selftest 37/37; reports selftest 14/14; API 32/32; harness:eval 3/3 with exact expected/received pairs and 32/32 baselines; contract diff empty; `npm ls --depth=0` clean. |
-| Remote GitHub Actions PASS | **NOT VERIFIED** | No commit, push, `workflow_dispatch` or other remote trigger was performed, per scope control. G5 explicitly requires an actual successful run for a remote PASS. |
-| Independent review | **APPROVED locally (round 2, same session `ses_e6baf06ffffeO2nQ0BQyLCHkBS`) — G5 local PASS, remote NOT VERIFIED** | Round 1 found the MEDIUM verifier-weakness defect (G5 local verifier FAIL); the fix was verified in round 2: HTML title + embedded marker, exact 32-id inventories, exact 9/2/2 mutation inventories with intended subsets, 14/14 self-tests, synthetic probe rejected (exit 1, 24 errors), fresh API 32/32, eval 3/3 with 32/32 baselines, SUT `c2f33ba4…d2d7fd` exact pre/post, `reports:verify` PASS on fresh and supplied trees, `actionlint` 0, unit 29/29, contract 21/21 unchanged. Reviewer evidence `evidence/generated/aql-500-review-r2-20261101/eval/` matches the supplied `aql-500-ci-20261101T0400Z`. No reviewer edits, commits or pushes; external deletions preserved. Recommendation: BLOCKED until authorized publication + successful observed CI. |
+| Remote GitHub Actions PASS | **PASS (observed)** | Run https://github.com/siberfaqih/api-quality-lab/actions/runs/41271870930 — SUCCESS, attempt 1, push to main, exact head `9dad20e`, every job step SUCCESS (Node 24.22.1, Playwright 1.64.1). Remote results match the local gates: doctor 11/11, contract 21/21 + 56/56, unit 29/29, traceability 32/28/32 + 9/9, self-tests 16/16 + 37/37 + 14/14, API 32/32, eval 3/3 with 32/32 baselines, SUT sha exact, `reports:verify` PASS. All four artifacts present and unexpired at the exact head. |
+| Independent review | **APPROVED locally (round 2) + full G5 APPROVED PASS on the remote run (same session `ses_e6baf06ffffeO2nQ0BQyLCHkBS`)** | Round 1 found the MEDIUM verifier-weakness defect (G5 local verifier FAIL); the fix was verified in round 2: HTML title + embedded marker, exact 32-id inventories, exact 9/2/2 mutation inventories with intended subsets, 14/14 self-tests, synthetic probe rejected (exit 1, 24 errors), fresh API 32/32, eval 3/3 with 32/32 baselines, SUT `c2f33ba4…d2d7fd` exact pre/post, `reports:verify` PASS on fresh and supplied trees, `actionlint` 0, unit 29/29, contract 21/21 unchanged. Reviewer evidence `evidence/generated/aql-500-review-r2-20261101/eval/` matched the supplied `aql-500-ci-20261101T0400Z`. Remote verification: reviewer observed run 41271870930 (SUCCESS, exact head `9dad20e`), confirmed all remote gate results, downloaded the evidence artifact to `evidence/generated/aql-500-remote-41271870930/harness-eval-evidence/` with a matching archive hash, and returned full G5 APPROVED PASS. No reviewer edits at any point; external deletions preserved. |
 
-**G5: local readiness PASS; remote CI NOT VERIFIED.** The workflow, report
-generation and verification are real and reproducible locally, but the gate is
-not complete until a committed run is observed on GitHub Actions. AQL-500 must
-not be marked DONE on the strength of local execution alone.
+**G5: PASS local + remote; AQL-500 DONE.** The workflow, report generation
+and verification are real and reproducible locally, and a committed run has
+now been observed on GitHub Actions: run 41271870930 (SUCCESS, attempt 1,
+push to `main`, exact head `9dad20e`), independently verified by the same
+reviewer with full G5 APPROVED PASS. Details in the table and in
+`reviews/AQL-500.md`.
 
-### Handoff — AQL-500 (REVIEW_REQUIRED)
+### Handoff — AQL-500 (DONE)
 
 - Scope: GitHub Actions workflow plus HTML/JUnit report generation, report
   verification and artifact separation. No commit, push, dispatch, external
@@ -488,7 +491,7 @@ not be marked DONE on the strength of local execution alone.
     selftest, API baseline with list/HTML/JUnit, pre-eval SUT hash,
     `harness:eval` with `--reports`, report verification, post-eval hash
     verification with git restore fallback, and four artifact uploads.
-  - `harness/report-check.ts` — JUnit/HTML verifier plus 8-case self-test.
+  - `harness/report-check.ts` — JUnit/HTML verifier plus 14-case self-test.
   - `harness/README.md` — `--reports` usage, report layout and limits.
 - Modified:
   - `harness/eval.ts` — optional `--reports <dir>`; Playwright emits
@@ -536,6 +539,11 @@ not be marked DONE on the strength of local execution alone.
   `evidence/generated/aql-500-ci-20261101T0400Z/` (2026-11-01T04:01Z, 17
   commands all exit 0) re-runs the full set against the strengthened verifier
   (`reports:selftest` 14/14) and records the synthetic-probe rejection.
+  Remote evidence: GitHub Actions run 41271870930 (SUCCESS, attempt 1, push to
+  `main`, exact head `9dad20e`; Node 24.22.1, Playwright 1.64.1) with all four
+  artifacts present and unexpired; the reviewer downloaded the evidence
+  artifact to `evidence/generated/aql-500-remote-41271870930/harness-eval-evidence/`
+  (archive hash matches the GitHub digest) and returned full G5 APPROVED PASS.
 - Development history (not a gate claim): the first reporter probe used
   `PLAYWRIGHT_JUNIT_OUTPUT_NAME`, which writes relative to the Playwright config
   directory; switching to `PLAYWRIGHT_JUNIT_OUTPUT_FILE` with an absolute path
@@ -546,11 +554,11 @@ not be marked DONE on the strength of local execution alone.
   from git on mismatch. The legitimate assertions, tests and contract were not
   weakened.
 - Known limitations:
-  - **No remote run:** the workflow has never executed on GitHub Actions. A
-    remote PASS requires a real run after the user approves a commit/push.
-  - Artifact upload and GitHub-side log rendering cannot be exercised locally;
-    the upload steps are validated only by `actionlint` and by running the same
-    commands and paths locally.
+  - **Remote run observed:** run 41271870930 (SUCCESS, exact head `9dad20e`)
+    completed G5; see `reviews/AQL-500.md` for the independent verification.
+  - Artifact upload and GitHub-side log rendering were exercised by that
+    remote run (four artifacts present and unexpired); `actionlint` plus the
+    local same-command runs remain the pre-push validation record.
   - `reports:verify` pins the baseline at 32 tests with the exact 32-id QA
     inventory, and the three mutation expectations with exact spec inventories
     (9/2/2) plus Playwright HTML markers; a deliberate suite/mutation change
@@ -564,5 +572,6 @@ not be marked DONE on the strength of local execution alone.
 - User deletions preserved: `.opencode/agents/builder.md`,
   `.opencode/agents/reviewer.md`, `.opencode/commands/*` and `opencode.json`
   remain deleted and were not restored.
-- No commit or push was performed. `contract/openapi.yaml` is unchanged.
+- Local work committed and pushed as `9dad20e` (user-authorized; pre-existing
+  external deletions excluded). `contract/openapi.yaml` is unchanged.
   AQL-600 has not started.
